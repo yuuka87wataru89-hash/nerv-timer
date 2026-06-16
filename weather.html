@@ -569,47 +569,59 @@ async function fetchJMA(admin1) {
 async function fetchOpenMeteo(lat, lon, model) {
   const mp = model ? `&models=${model}` : '';
   const base = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&timezone=Asia%2FTokyo&forecast_days=7${mp}`;
-
-  // Some models (ecmwf_ifs025) don't support precipitation_probability — try with, fallback without
-  const withProb  = `${base}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&hourly=temperature_2m,precipitation,precipitation_probability,weather_code`;
+  const withProb    = `${base}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&hourly=temperature_2m,precipitation,precipitation_probability,weather_code`;
   const withoutProb = `${base}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&hourly=temperature_2m,precipitation,weather_code`;
 
-  let r = await fetch(withProb);
-  let hasProb = true;
-  if (!r.ok) {
-    r = await fetch(withoutProb);
-    hasProb = false;
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  // Estimate rain probability from precipitation mm for models without the field
+  const estimateProb = mm => mm == null ? null : mm <= 0 ? 0 : mm < 0.5 ? 15 : mm < 1 ? 35 : mm < 3 ? 60 : mm < 5 ? 80 : 95;
+
+  // Try fetching with precipitation_probability; fall back if the model doesn't support it
+  async function tryFetch(url) {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (j.error || !j.hourly || !j.daily) return null;
+    return j;
   }
-  const j = await r.json();
 
-  // If API returned but precipitation_probability is missing from response, mark as unavailable
-  if (hasProb && !j.hourly.precipitation_probability) hasProb = false;
+  let j = await tryFetch(withProb);
+  let hasProb = j != null && Array.isArray(j.hourly.precipitation_probability) &&
+                j.hourly.precipitation_probability.some(v => v != null);
 
-  // Estimate hourly rain probability from precipitation mm when not available
-  const estimateProb = (mm) => mm == null ? null : mm <= 0 ? 0 : mm < 0.5 ? 20 : mm < 1 ? 40 : mm < 3 ? 60 : mm < 5 ? 80 : 95;
+  if (!j) {
+    j = await tryFetch(withoutProb);
+    if (!j) throw new Error('Open-Meteo fetch failed');
+  }
 
-  const daily = j.daily.time.map((date, i) => ({
-    date,
-    maxTemp:  Math.round(j.daily.temperature_2m_max[i] ?? 0),
-    minTemp:  Math.round(j.daily.temperature_2m_min[i] ?? 0),
-    rainProb: hasProb ? (j.daily.precipitation_probability_max?.[i] ?? null) : estimateProb(j.daily.precipitation_sum?.[i]),
-    rainMM:   round1(j.daily.precipitation_sum[i] ?? 0),
-    emoji:    wmoEmoji(j.daily.weather_code[i]),
-    desc:     '',
-  }));
+  const daily = j.daily.time.map((date, i) => {
+    const mm = j.daily.precipitation_sum?.[i];
+    return {
+      date,
+      maxTemp:  Math.round(j.daily.temperature_2m_max?.[i] ?? 0),
+      minTemp:  Math.round(j.daily.temperature_2m_min?.[i] ?? 0),
+      rainProb: hasProb
+        ? (j.daily.precipitation_probability_max?.[i] ?? null)
+        : estimateProb(mm),
+      rainMM:   round1(mm ?? 0),
+      emoji:    wmoEmoji(j.daily.weather_code?.[i]),
+      desc:     '',
+    };
+  });
 
   const hourly = {};
-  j.hourly.time.forEach((iso, i) => {
+  (j.hourly.time || []).forEach((iso, i) => {
     const date = iso.slice(0,10);
     const hour = +iso.slice(11,13);
     const mm = j.hourly.precipitation?.[i] ?? 0;
+    const prob = hasProb
+      ? (j.hourly.precipitation_probability?.[i] ?? estimateProb(mm))
+      : estimateProb(mm);
     (hourly[date] = hourly[date]||[]).push({
       hour,
-      temp:     Math.round(j.hourly.temperature_2m[i] ?? 0),
-      rainProb: hasProb ? (j.hourly.precipitation_probability?.[i] ?? null) : estimateProb(mm),
+      temp:     Math.round(j.hourly.temperature_2m?.[i] ?? 0),
+      rainProb: prob,
       rainMM:   round1(mm),
-      emoji:    wmoEmoji(j.hourly.weather_code[i]),
+      emoji:    wmoEmoji(j.hourly.weather_code?.[i]),
     });
   });
 
