@@ -248,7 +248,7 @@ td.hourly-span { padding: 0; }
       <small>WEATHER INTEL SYSTEM</small>
     </div>
     <div class="location-bar">
-      <input type="text" id="city-input" placeholder="都市名 / City" value="東京" style="width:150px">
+      <input type="text" id="city-input" placeholder="都市名 / City" value="北九州市八幡西区" style="width:180px">
       <button class="icon-btn" id="geo-btn" title="現在地">📍</button>
       <button class="primary" id="scan-btn">SCAN</button>
     </div>
@@ -332,8 +332,8 @@ const JMA_AREA_CODES = {
 
 // ── STATE ──────────────────────────────────────────────────────────────
 const st = {
-  lat: 35.6895, lon: 139.6917, city: '東京',
-  admin1: '東京都',   // prefecture from geocoding
+  lat: 33.7500, lon: 130.7500, city: '北九州市八幡西区',
+  admin1: '福岡県',   // prefecture from geocoding
   days: [],           // [{date,label,isToday,isTomorrow}]
   data: {},           // {srcId:{daily,hourly}|{error}, ...}
   expanded: {},       // {date:bool}
@@ -359,6 +359,21 @@ function wmoEmoji(c) {
   if (c>=71&&c<=75)         return '❄️';
   if (c>=80&&c<=82)         return '🌧️';
   if (c===95)               return '⛈️';
+  return '🌡️';
+}
+
+// WWO weather codes used by wttr.in (different from WMO)
+function wttrEmoji(code) {
+  code = +code;
+  if (code === 113) return '☀️';
+  if (code === 116) return '🌤️';
+  if (code === 119 || code === 122) return '☁️';
+  if (code === 143 || code === 248 || code === 260) return '🌫️';
+  if ([200,386,389,392,395].includes(code)) return '⛈️';
+  if ([227,230,323,326,329,332,335,338,350,368,371,374,377].includes(code)) return '❄️';
+  if ([179,182,185,317,320,362,365].includes(code)) return '🌨️';
+  if ([176,263,266,293,353].includes(code)) return '🌦️';
+  if (code >= 296) return '🌧️';
   return '🌡️';
 }
 
@@ -433,7 +448,8 @@ async function fetchJMA(admin1) {
     const date = iso.slice(0, 10);
     const weatherCode = area0.weatherCodes?.[i] || '0';
     const weather     = area0.weathers?.[i] || '';
-    const pop         = area0.pops?.[i] != null ? +area0.pops[i] : null;
+    const rawPop = area0.pops?.[i];
+    const pop = (rawPop != null && rawPop !== '' && rawPop !== '--') ? +rawPop : null;
     const minTemp     = area1.tempsMin?.[i] != null && area1.tempsMin[i] !== '' ? +area1.tempsMin[i] : null;
     const maxTemp     = area1.tempsMax?.[i] != null && area1.tempsMax[i] !== '' ? +area1.tempsMax[i] : null;
     return {
@@ -505,7 +521,7 @@ async function fetchWttr(lat, lon) {
       minTemp:  Math.round(+day.mintempC),
       rainProb,
       rainMM,
-      emoji:    wmoEmoji(+(midHour.weatherCode||0)),
+      emoji:    wttrEmoji(+(midHour.weatherCode||0)),
       desc:     '',
     };
   });
@@ -519,7 +535,7 @@ async function fetchWttr(lat, lon) {
       temp:     Math.round(+h.tempC||0),
       rainProb: +h.chanceofrain||0,
       rainMM:   round1(+h.precipMM||0),
-      emoji:    wmoEmoji(+h.weatherCode||0),
+      emoji:    wttrEmoji(+h.weatherCode||0),
     }));
   });
 
