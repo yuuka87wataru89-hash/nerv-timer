@@ -729,8 +729,11 @@ async function doScan() {
     st.days = buildDays();
     await fetchAll();
   } catch(e) {
-    document.getElementById('loading-ov').classList.remove('show');
-    setStatus(`ERROR: ${e.message}`);
+    // Geocoding failed — fall back to default Tokyo coordinates and proceed
+    setStatus(`ジオコーディング失敗 (${e.message})。デフォルト座標(東京)で試みます...`, 'loading');
+    st.city = city;
+    st.days = buildDays();
+    await fetchAll();
   }
 }
 
