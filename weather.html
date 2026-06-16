@@ -8,253 +8,322 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:           #040404;
-  --orange:       #e86400;
-  --orange-dim:   rgba(232,100,0,0.13);
-  --orange-faint: rgba(232,100,0,0.055);
-  --text:         #e86400;
-  --text-dim:     rgba(232,100,0,0.5);
-  --text-faint:   rgba(232,100,0,0.22);
-  --border:       rgba(232,100,0,0.22);
-  --border2:      rgba(232,100,0,0.5);
-  --rain-none:    rgba(100,100,100,0.5);
-  --rain-low:     #4db8e8;
-  --rain-mid:     #1e7abf;
-  --rain-high:    #0d3f8f;
-  --rain-max:     #4a00a0;
+  --bg:         #f5f7fa;
+  --surface:    #ffffff;
+  --header-bg:  #1e3a5f;
+  --header-txt: #ffffff;
+  --primary:    #1e3a5f;
+  --accent:     #2563eb;
+  --text:       #1f2937;
+  --text-dim:   #6b7280;
+  --text-faint: #9ca3af;
+  --border:     #e5e7eb;
+  --border2:    #d1d5db;
+  --src-bg:     #f8fafc;
+  --today-hl:   #eff6ff;
+  --today-bdr:  #2563eb;
+  --rain-none:  #9ca3af;
+  --rain-low:   #60a5fa;
+  --rain-mid:   #2563eb;
+  --rain-high:  #1d4ed8;
+  --rain-max:   #7c3aed;
+  --hi-color:   #dc2626;
+  --lo-color:   #2563eb;
 }
 
-@keyframes flicker {
-  0%,94%,100% { opacity:1; }
-  95% { opacity:.97; }
-  97% { opacity:.98; }
-  99% { opacity:.96; }
-}
-@keyframes scan {
-  0%   { background-position: 0 0; }
-  100% { background-position: 0 4000px; }
-}
-@keyframes pulse {
-  0%,100% { opacity:1; }
-  50%      { opacity:0.4; }
-}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes spin  { to{transform:rotate(360deg)} }
 
 body {
-  background-color: var(--bg);
-  background-image:
-    linear-gradient(var(--orange-faint) 1px, transparent 1px),
-    linear-gradient(90deg, var(--orange-faint) 1px, transparent 1px);
-  background-size: 44px 44px;
+  background: var(--bg);
   color: var(--text);
-  font-family: 'Courier New', Consolas, 'Lucida Console', monospace;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
   min-height: 100vh;
-  padding: 16px;
-  animation: flicker 10s infinite;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-body::before {
-  content: '';
-  position: fixed; inset: 0;
-  background: repeating-linear-gradient(
-    0deg, transparent, transparent 3px,
-    rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 4px
-  );
-  pointer-events: none;
-  z-index: 1000;
-}
-body::after {
-  content: '';
-  position: fixed; left:0; right:0; top:0;
-  height: 120px;
-  background: linear-gradient(transparent, rgba(232,100,0,0.018), transparent);
-  animation: scan 6s linear infinite;
-  pointer-events: none;
-  z-index: 999;
-}
-
-#app { max-width: 1500px; margin: 0 auto; position: relative; z-index: 1; }
-
-/* HEADER */
-.nerv-header {
+/* ── HEADER ── */
+.app-header {
+  background: var(--header-bg);
+  color: var(--header-txt);
+  padding: 12px 16px;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 0 14px;
-  border-bottom: 1px solid var(--border2);
-  margin-bottom: 12px;
   flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
-.nerv-logo {
-  font-size: 20px;
-  font-weight: bold;
-  letter-spacing: 4px;
-  color: var(--orange);
-  text-shadow: 0 0 12px var(--orange);
-  flex-shrink: 0;
-  line-height: 1;
-}
-.nerv-logo small {
-  display: block;
-  font-size: 10px;
-  letter-spacing: 2px;
-  opacity: 0.55;
-  margin-top: 3px;
-}
-.location-bar { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 240px; }
+.app-logo { font-size: 18px; font-weight: 700; letter-spacing: 2px; flex-shrink: 0; white-space: nowrap; }
+.app-logo small { display: block; font-size: 10px; font-weight: 400; opacity: 0.7; letter-spacing: 1px; }
+.location-bar { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 200px; }
 
 input[type=text] {
-  background: rgba(232,100,0,0.07);
-  border: 1px solid var(--border2);
-  color: var(--orange);
-  font-family: inherit;
-  font-size: 13px;
-  padding: 5px 8px;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  padding: 7px 10px;
   outline: none;
+  flex: 1;
+  min-width: 0;
 }
-input[type=text]:focus { border-color: var(--orange); box-shadow: 0 0 6px rgba(232,100,0,0.3); }
-input[type=text]::placeholder { color: var(--text-faint); }
+input[type=text]::placeholder { color: rgba(255,255,255,0.5); }
+input[type=text]:focus { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.6); }
 
 button {
-  background: transparent;
-  border: 1px solid var(--border2);
-  color: var(--orange);
-  font-family: inherit;
-  font-size: 12px;
-  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  font-size: 13px;
+  padding: 7px 14px;
   cursor: pointer;
-  letter-spacing: 1px;
+  white-space: nowrap;
   transition: background 0.15s;
 }
-button:hover { background: var(--orange-dim); }
-button.icon-btn { padding: 5px 8px; font-size: 15px; border-color: var(--border); }
-button.primary { border-color: var(--orange); font-weight: bold; letter-spacing: 2px; font-size: 13px; }
+button:hover { background: rgba(255,255,255,0.28); }
+button.primary { background: #2563eb; border-color: #2563eb; font-weight: 600; }
+button.primary:hover { background: #1d4ed8; }
+button.icon-btn { padding: 7px 10px; font-size: 16px; }
 
+/* ── STATUS BAR ── */
 .status-bar {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-dim);
-  margin-bottom: 12px;
-  letter-spacing: 1px;
-  min-height: 15px;
+  padding: 8px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
 }
-.status-bar .active { color: var(--orange); text-shadow: 0 0 6px rgba(232,100,0,0.4); }
+.status-bar .active { color: var(--accent); font-weight: 600; }
 .status-bar .loading { animation: pulse 1s infinite; }
 
-/* TABLE */
-.table-wrapper { overflow-x: auto; border: 1px solid var(--border2); }
+/* ── MAIN ── */
+#app { padding: 12px; }
 
-table { border-collapse: collapse; width: 100%; min-width: 820px; font-size: 12px; }
+/* ── LEGEND ── */
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 2px; }
 
-th, td { border: 1px solid var(--border); padding: 0; vertical-align: top; }
+/* ── TABLE ── */
+.table-wrapper {
+  overflow-x: auto;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  border: 1px solid var(--border);
+}
 
+table { border-collapse: collapse; width: 100%; min-width: 700px; }
+th, td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 0; vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+
+/* Source label column */
 th.src-col, td.src-col {
-  width: 100px; min-width: 85px;
-  padding: 6px 8px;
-  background: rgba(232,100,0,0.04);
+  width: 110px; min-width: 95px;
+  padding: 10px 10px;
+  background: var(--src-bg);
   position: sticky; left: 0; z-index: 2;
   vertical-align: middle;
-  border-right-color: var(--border2);
+  border-right: 2px solid var(--border2);
 }
-td.src-col .src-name { color: var(--orange); display: block; font-size: 11px; font-weight: bold; letter-spacing: 1px; }
-td.src-col .src-sub  { font-size: 10px; color: var(--text-faint); letter-spacing: 0; }
+td.src-col .src-name { color: var(--primary); display: block; font-size: 13px; font-weight: 700; }
+td.src-col .src-sub  { font-size: 11px; color: var(--text-faint); }
 
+/* Day header */
 th.day-hdr {
   text-align: center;
-  padding: 7px 4px 5px;
-  font-size: 11px;
-  letter-spacing: 1px;
-  background: rgba(232,100,0,0.05);
+  padding: 8px 6px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: var(--src-bg);
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
+  min-width: 110px;
+  transition: background 0.12s;
 }
-th.day-hdr:hover  { background: var(--orange-dim); }
-th.day-hdr.today  { border-top: 2px solid var(--orange); }
-th.day-hdr.today .dlabel { color: var(--orange); }
-th.day-hdr.expanded { background: rgba(232,100,0,0.1); }
-th.day-hdr .dlabel  { display: block; margin-bottom: 2px; }
-th.day-hdr .dtoggle { font-size: 9px; color: var(--text-faint); }
+th.day-hdr:hover  { background: #eff6ff; color: var(--accent); }
+th.day-hdr.today  { background: var(--today-hl); border-top: 3px solid var(--today-bdr); }
+th.day-hdr.today .dlabel { color: var(--accent); font-weight: 700; }
+th.day-hdr.expanded { background: #dbeafe; }
+th.day-hdr .dlabel  { display: block; margin-bottom: 3px; font-size: 13px; color: var(--text); }
+th.day-hdr .dtoggle { font-size: 10px; color: var(--accent); background: #eff6ff; border-radius: 4px; padding: 1px 5px; }
+th.day-hdr.expanded .dtoggle { background: #bfdbfe; }
 
+/* Data cells */
 td.day-cell {
   text-align: center;
-  padding: 7px 4px;
-  min-width: 95px;
+  padding: 8px 6px;
+  min-width: 110px;
   vertical-align: middle;
+  background: #fff;
 }
-.cell-inner { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.cell-emoji { font-size: 18px; line-height: 1; }
-.cell-temp  { font-size: 11px; }
-.cell-temp .hi { color: #ff9944; }
-.cell-temp .lo { color: #88aacc; }
-.cell-desc { font-size: 9px; color: var(--text-dim); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+tr:nth-child(even) td.day-cell { background: #fafbfc; }
+td.day-cell.today-col { background: #f0f7ff; }
+
+.cell-inner { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.cell-emoji { font-size: 22px; line-height: 1; }
+.cell-temp  { font-size: 12px; font-weight: 600; }
+.cell-temp .hi { color: var(--hi-color); }
+.cell-temp .lo { color: var(--lo-color); }
+.cell-desc { font-size: 10px; color: var(--text-dim); max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .rain-badge {
   display: inline-block;
-  padding: 2px 6px;
-  border-radius: 2px;
-  font-size: 12px;
-  font-weight: bold;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
   color: #fff;
-  min-width: 44px;
+  min-width: 52px;
   text-align: center;
-  letter-spacing: 1px;
 }
-.rain-mm { font-size: 10px; color: #7799bb; }
+.rain-mm { font-size: 11px; color: var(--accent); }
 
-.c-loading { color: var(--text-faint); font-size: 10px; letter-spacing: 1px; animation: pulse 1s infinite; }
-.c-error   { color: #cc2222; font-size: 10px; cursor: help; letter-spacing: 1px; }
-.c-nodata  { color: var(--text-faint); font-size: 12px; }
+.c-loading { color: var(--text-faint); font-size: 11px; animation: pulse 1s infinite; }
+.c-error   { color: #dc2626; font-size: 11px; cursor: help; }
+.c-nodata  { color: var(--text-faint); font-size: 14px; }
 
-/* HOURLY PANEL */
-tr.hourly-row td { background: #050507; padding: 0; }
-td.hourly-span { padding: 0; }
-.hourly-scroll { overflow-x: auto; }
-.hourly-tbl { width: 100%; border-collapse: collapse; font-size: 11px; }
-.hourly-tbl th, .hourly-tbl td {
-  border: 1px solid rgba(232,100,0,0.1);
-  padding: 3px 5px;
+/* ── HOURLY PANEL ── */
+.hourly-section {
+  background: #f0f7ff;
+  border-top: 2px solid #bfdbfe;
+  border-bottom: 2px solid #bfdbfe;
+}
+.hourly-section td { border: none; padding: 0; }
+.hourly-label {
+  padding: 6px 10px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: #dbeafe;
+}
+.hourly-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.hourly-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.hourly-tbl th {
+  background: #dbeafe;
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 8px;
   text-align: center;
   white-space: nowrap;
+  border-right: 1px solid #bfdbfe;
+  border-bottom: 1px solid #bfdbfe;
 }
-.hourly-tbl th { background: rgba(232,100,0,0.06); color: var(--text-dim); font-size: 10px; letter-spacing: 1px; }
-.hourly-tbl .h-time { color: var(--text-dim); font-size: 10px; text-align: left; padding-left: 8px; background: rgba(232,100,0,0.03); }
-.h-rain { display: inline-block; padding: 1px 4px; border-radius: 2px; color: #fff; font-weight: bold; font-size: 10px; min-width: 30px; }
-.h-temp { font-size: 10px; color: var(--text-dim); }
-.h-mm   { font-size: 10px; color: #7799bb; }
-.h-empty { color: var(--text-faint); font-size: 10px; }
+.hourly-tbl td {
+  padding: 5px 6px;
+  text-align: center;
+  white-space: nowrap;
+  border-right: 1px solid #e0eaff;
+  border-bottom: 1px solid #e0eaff;
+  background: #f8fbff;
+}
+.hourly-tbl tr:nth-child(even) td { background: #f0f7ff; }
+.h-time {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  text-align: left;
+  padding-left: 12px !important;
+  background: #dbeafe !important;
+  border-right: 2px solid #bfdbfe !important;
+  white-space: nowrap;
+}
+.h-rain {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 12px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  min-width: 40px;
+}
+.h-temp { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.h-mm   { font-size: 10px; color: var(--accent); }
+.h-empty { color: var(--text-faint); font-size: 12px; }
+.h-no-data { color: var(--text-faint); font-size: 11px; font-style: italic; padding: 10px; }
 
-/* Loading overlay */
+/* ── LOADING OVERLAY ── */
 #loading-ov {
   display: none; position: fixed; inset: 0;
-  background: rgba(4,4,4,0.88);
+  background: rgba(30,58,95,0.75);
   z-index: 500; align-items: center; justify-content: center;
-  font-size: 20px; letter-spacing: 5px;
-  animation: pulse 0.8s infinite;
+  flex-direction: column; gap: 16px;
 }
 #loading-ov.show { display: flex; }
+.spinner {
+  width: 40px; height: 40px;
+  border: 4px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.loading-text { color: #fff; font-size: 14px; font-weight: 600; letter-spacing: 2px; }
 
-/* Scrollbar */
+/* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--border2); }
-::-webkit-scrollbar-thumb:hover { background: var(--orange); }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .app-header { padding: 10px 12px; gap: 8px; }
+  .app-logo { font-size: 15px; }
+  input[type=text] { font-size: 13px; padding: 6px 8px; }
+  button { padding: 6px 10px; font-size: 12px; }
+  #app { padding: 8px; }
+  th.src-col, td.src-col { width: 80px; min-width: 70px; padding: 6px 6px; }
+  td.src-col .src-name { font-size: 11px; }
+  td.src-col .src-sub  { font-size: 9px; }
+  td.day-cell { min-width: 90px; padding: 6px 4px; }
+  .cell-emoji { font-size: 18px; }
+  .rain-badge { font-size: 12px; padding: 2px 6px; min-width: 44px; }
+  th.day-hdr { min-width: 90px; }
+}
 </style>
 </head>
-<body>
-<div id="app">
-
-  <div class="nerv-header">
-    <div class="nerv-logo">
-      NERV
-      <small>WEATHER INTEL SYSTEM</small>
-    </div>
-    <div class="location-bar">
-      <input type="text" id="city-input" placeholder="都市名 / City" value="北九州市八幡西区" style="width:180px">
-      <button class="icon-btn" id="geo-btn" title="現在地">📍</button>
-      <button class="primary" id="scan-btn">SCAN</button>
-    </div>
+<header class="app-header">
+  <div class="app-logo">
+    🌦 天気予報
+    <small>5ソース比較 · 雨の確率重視</small>
   </div>
+  <div class="location-bar">
+    <input type="text" id="city-input" placeholder="都市名を入力" value="北九州市八幡西区">
+    <button class="icon-btn" id="geo-btn" title="現在地を取得">📍</button>
+    <button class="primary" id="scan-btn">🔍 検索</button>
+  </div>
+</header>
 
-  <div class="status-bar" id="status">──</div>
+<div class="status-bar" id="status">──</div>
+
+<div id="app">
+  <div class="legend">
+    <strong>雨の確率：</strong>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--rain-none)"></span>〜29%</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--rain-low)"></span>30〜59%</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--rain-mid)"></span>60〜79%</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--rain-max)"></span>80%〜</span>
+    <span style="margin-left:8px;color:var(--text-faint)">※今日・明日は時間別自動展開。日付クリックで切替</span>
+  </div>
 
   <div class="table-wrapper">
     <table id="wtbl">
@@ -264,7 +333,10 @@ td.hourly-span { padding: 0; }
   </div>
 </div>
 
-<div id="loading-ov">SCANNING...</div>
+<div id="loading-ov">
+  <div class="spinner"></div>
+  <div class="loading-text">データ取得中...</div>
+</div>
 
 <script>
 'use strict';
@@ -553,10 +625,11 @@ function hRain(prob) {
   return `<span class="h-rain" style="background:${rainColor(prob)}">${prob}%</span>`;
 }
 
-function renderDayCell(srcId, date) {
+function renderDayCell(srcId, date, isToday) {
+  const cls = `day-cell${isToday ? ' today-col' : ''}`;
   const sd = st.data[srcId];
-  if (!sd) return `<td class="day-cell"><span class="c-loading">LOADING</span></td>`;
-  if (sd.error) return `<td class="day-cell"><span class="c-error" title="${esc(sd.error)}">ERROR</span></td>`;
+  if (!sd) return `<td class="${cls}"><span class="c-loading">読込中...</span></td>`;
+  if (sd.error) return `<td class="${cls}"><span class="c-error" title="${esc(sd.error)}">取得失敗</span></td>`;
 
   const day = sd.daily?.find(d => d.date === date);
   if (!day) return `<td class="day-cell"><span class="c-nodata">─</span></td>`;
@@ -570,7 +643,7 @@ function renderDayCell(srcId, date) {
     ? `<span class="cell-desc" title="${esc(day.desc)}">${esc(day.desc)}</span>`
     : '';
 
-  return `<td class="day-cell"><div class="cell-inner">
+  return `<td class="${cls}"><div class="cell-inner">
     <span class="cell-emoji">${day.emoji}</span>
     <span class="cell-temp">${tempStr}</span>
     ${rainBadge(day.rainProb)}
@@ -579,8 +652,7 @@ function renderDayCell(srcId, date) {
   </div></td>`;
 }
 
-function renderHourlyPanel(date) {
-  // JMA has no hourly — exclude from hour set collection
+function renderHourlyPanel(date, label) {
   const hourSources = SOURCES.filter(s => s.id !== 'jma');
   const hourSet = new Set();
   hourSources.forEach(src => {
@@ -589,30 +661,34 @@ function renderHourlyPanel(date) {
       sd.hourly[date].forEach(h => hourSet.add(h.hour));
     }
   });
-  if (!hourSet.size) return '<div style="padding:8px;font-size:10px;color:var(--text-faint);letter-spacing:1px">NO HOURLY DATA</div>';
+
+  const anyLoading = hourSources.some(s => !st.data[s.id]);
+  if (!hourSet.size) {
+    const msg = anyLoading
+      ? '<div class="h-no-data">⏳ データ取得中...</div>'
+      : '<div class="h-no-data">時間別データなし</div>';
+    return `<div class="hourly-label">⏱ 時間別予報 — ${esc(label)}</div>${msg}`;
+  }
 
   const hours = [...hourSet].sort((a,b)=>a-b);
 
-  let html = `<div class="hourly-scroll"><table class="hourly-tbl"><thead><tr>
-    <th>時刻</th>
-    ${SOURCES.map(s=>`<th>${s.name}<br><span style="color:var(--text-faint);font-size:9px">${s.sub}</span></th>`).join('')}
+  let html = `<div class="hourly-label">⏱ 時間別予報 — ${esc(label)}</div>`;
+  html += `<div class="hourly-scroll"><table class="hourly-tbl"><thead><tr>
+    <th style="text-align:left;padding-left:12px">時刻</th>
+    ${hourSources.map(s=>`<th>${s.name}<br><span style="font-size:9px;font-weight:400;color:#5b7fa6">${s.sub}</span></th>`).join('')}
   </tr></thead><tbody>`;
 
   hours.forEach(hour => {
     html += `<tr><td class="h-time">${String(hour).padStart(2,'0')}:00</td>`;
-    SOURCES.forEach(src => {
-      // JMA has no hourly data
-      if (src.id === 'jma') {
-        html += `<td><span class="h-empty">─</span></td>`; return;
-      }
+    hourSources.forEach(src => {
       const sd = st.data[src.id];
-      if (!sd)       { html += `<td><span class="h-empty">…</span></td>`; return; }
-      if (sd.error)  { html += `<td><span class="c-error" title="${esc(sd.error)}">ERR</span></td>`; return; }
-      const hd = sd.hourly?.[date]?.find(h=>h.hour===hour);
-      if (!hd)       { html += `<td><span class="h-empty">─</span></td>`; return; }
+      if (!sd)      { html += `<td><span class="h-empty">⏳</span></td>`; return; }
+      if (sd.error) { html += `<td><span class="c-error" title="${esc(sd.error)}">ERR</span></td>`; return; }
+      const hd = sd.hourly?.[date]?.find(h => h.hour === hour);
+      if (!hd)      { html += `<td><span class="h-empty">─</span></td>`; return; }
       html += `<td>
-        ${hRain(hd.rainProb)}
-        <div class="h-temp">${hd.temp}°</div>
+        <div>${hRain(hd.rainProb)}</div>
+        <div class="h-temp">${hd.emoji} ${hd.temp}°C</div>
         <div class="h-mm">${hd.rainMM}mm</div>
       </td>`;
     });
@@ -628,7 +704,7 @@ function renderTable() {
 
   // HEAD
   document.getElementById('wtbl-head').innerHTML = `<tr>
-    <th class="src-col" style="font-size:10px;color:var(--text-faint);letter-spacing:1px">SOURCE</th>
+    <th class="src-col" style="font-size:11px;color:var(--text-dim);font-weight:600">情報源</th>
     ${days.map(d => {
       const cls = ['day-hdr', d.isToday?'today':'', st.expanded[d.date]?'expanded':''].filter(Boolean).join(' ');
       const icon = st.expanded[d.date] ? '▾' : '▸';
@@ -648,18 +724,15 @@ function renderTable() {
         <span class="src-name">${src.name}</span>
         <span class="src-sub">${src.sub}</span>
       </td>
-      ${days.map(d => renderDayCell(src.id, d.date)).join('')}
+      ${days.map(d => renderDayCell(src.id, d.date, d.isToday)).join('')}
     </tr>`;
   });
 
   // Hourly panels
   days.forEach(d => {
     if (!st.expanded[d.date]) return;
-    bodyHtml += `<tr class="hourly-row">
-      <td class="src-col" style="font-size:10px;color:var(--text-faint);letter-spacing:1px">
-        時間別<br>${d.label}
-      </td>
-      <td class="hourly-span" colspan="${days.length}">${renderHourlyPanel(d.date)}</td>
+    bodyHtml += `<tr class="hourly-section">
+      <td colspan="${days.length + 1}">${renderHourlyPanel(d.date, d.label)}</td>
     </tr>`;
   });
 
