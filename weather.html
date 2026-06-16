@@ -256,6 +256,7 @@ td.day-cell.today-col { background: #f0f7ff; }
   font-size: 12px;
   min-width: 40px;
 }
+.h-emoji { font-size: 22px; line-height: 1.2; }
 .h-temp { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 .h-mm   { font-size: 10px; color: var(--accent); }
 .h-empty { color: var(--text-faint); font-size: 12px; }
@@ -371,7 +372,6 @@ const DOW = ['日','月','火','水','木','金','土'];
 
 const SOURCES = [
   { id:'jma',   name:'気象庁',    sub:'公式API'       },
-  { id:'msm',   name:'気象庁MSM', sub:'Open-Meteo'    },
   { id:'ecmwf', name:'ECMWF',     sub:'Open-Meteo'    },
   { id:'gfs',   name:'GFS (NOAA)',sub:'Open-Meteo'    },
   { id:'wttr',  name:'wttr.in',   sub:'3日分'         },
@@ -533,16 +533,13 @@ async function fetchJMA(admin1) {
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const j = await r.json();
 
-  // j[1] = weekly forecast
-  // timeSeries[0] = weather codes (7 days)
-  // timeSeries[1] = pops (降水確率)
-  // timeSeries[2] = temps (min/max)
   const weekly = j[1];
-  const ts0 = weekly.timeSeries[0];
-  const ts1 = weekly.timeSeries[1]; // pops
-  const ts2 = weekly.timeSeries[2]; // temps
+  // Scan timeSeries for the correct arrays by field presence
+  const ts0 = weekly.timeSeries.find(ts => ts.areas?.[0]?.weatherCodes) || weekly.timeSeries[0];
+  const ts1 = weekly.timeSeries.find(ts => ts.areas?.[0]?.pops);
+  const ts2 = weekly.timeSeries.find(ts => ts.areas?.[0]?.tempsMin || ts.areas?.[0]?.tempsMax);
 
-  const area0 = ts0.areas[0];
+  const area0 = ts0?.areas[0];
   const area1 = ts1?.areas[0];
   const area2 = ts2?.areas[0];
 
@@ -570,7 +567,7 @@ async function fetchJMA(admin1) {
     });
   }
 
-  const daily = ts0.timeDefines.map((iso, i) => {
+  const daily = (ts0?.timeDefines || []).map((iso, i) => {
     const date = iso.slice(0, 10);
     const weatherCode = area0.weatherCodes?.[i] || '0';
     const weather     = area0.weathers?.[i] || '';
@@ -738,7 +735,8 @@ function renderHourlyPanel(date, label) {
       if (!hd)      { html += `<td><span class="h-empty">─</span></td>`; return; }
       html += `<td>
         <div>${hRain(hd.rainProb)}</div>
-        <div class="h-temp">${hd.emoji} ${hd.temp}°C</div>
+        <div class="h-emoji">${hd.emoji}</div>
+        <div class="h-temp">${hd.temp}°C</div>
         <div class="h-mm">${hd.rainMM}mm</div>
       </td>`;
     });
@@ -813,7 +811,6 @@ async function fetchAll() {
 
   const tasks = {
     jma:   fetchJMA(admin1),
-    msm:   fetchOpenMeteo(lat, lon, 'jma_seamless'),
     ecmwf: fetchOpenMeteo(lat, lon, 'ecmwf_ifs025'),
     gfs:   fetchOpenMeteo(lat, lon, null),
     wttr:  fetchWttr(lat, lon),
