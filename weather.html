@@ -327,12 +327,19 @@ td.day-cell.today-col { background: #f0f7ff; }
 // ── CONSTANTS ──────────────────────────────────────────────────────────
 const DOW = ['日','月','火','水','木','金','土'];
 
+// SOURCES: shown in daily table (気象庁 official for daily, no MSM row)
 const SOURCES = [
   { id:'jma',   name:'気象庁',    sub:'公式API'       },
-  { id:'msm',   name:'気象庁MSM', sub:'Open-Meteo'    },
   { id:'ecmwf', name:'ECMWF',     sub:'Open-Meteo'    },
   { id:'gfs',   name:'GFS (NOAA)',sub:'Open-Meteo'    },
   { id:'wttr',  name:'wttr.in',   sub:'3日分'         },
+];
+// HOURLY_SOURCES: shown in hourly chart (MSM replaces JMA which has no hourly data)
+const HOURLY_SOURCES = [
+  { id:'msm',   name:'気象庁MSM', sub:'Open-Meteo', color:'#7c3aed' },
+  { id:'ecmwf', name:'ECMWF',     sub:'Open-Meteo', color:'#2563eb' },
+  { id:'gfs',   name:'GFS (NOAA)',sub:'Open-Meteo', color:'#16a34a' },
+  { id:'wttr',  name:'wttr.in',   sub:'3日分',      color:'#ea580c' },
 ];
 
 const JMA_AREA_CODES = {
@@ -491,28 +498,43 @@ async function fetchJMA(admin1) {
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const j = await r.json();
 
-  const weekly = j[1];
-  // Scan timeSeries for the correct arrays by field presence
-  const ts0 = weekly.timeSeries.find(ts => ts.areas?.[0]?.weatherCodes) || weekly.timeSeries[0];
-  const ts1 = weekly.timeSeries.find(ts => ts.areas?.[0]?.pops);
-  const ts2 = weekly.timeSeries.find(ts => ts.areas?.[0]?.tempsMin || ts.areas?.[0]?.tempsMax);
+  // Helper: find a timeSeries that has the given field in any area
+  const findTs = (arr, field) => arr.find(ts => ts.areas?.some(a => a[field]));
+  const findArea = (ts, field) => ts?.areas.find(a => a[field]);
 
-  const area0 = ts0?.areas[0];
-  const area1 = ts1?.areas[0];
-  const area2 = ts2?.areas[0];
-
-  // Build pop lookup by date (timeDefines may differ between series)
+  // Build popByDate: prefer j[0] short-term (6-hourly, reliable) → take max per day
   const popByDate = {};
-  if (ts1 && area1?.pops) {
-    ts1.timeDefines.forEach((iso, i) => {
-      const raw = area1.pops[i];
-      if (raw != null && raw !== '' && raw !== '--') {
-        popByDate[iso.slice(0, 10)] = +raw;
+  const addPops = (ts, takeMax) => {
+    if (!ts) return;
+    const area = findArea(ts, 'pops');
+    if (!area) return;
+    ts.timeDefines.forEach((iso, i) => {
+      const raw = area.pops[i];
+      if (raw == null || raw === '' || raw === '--') return;
+      const date = iso.slice(0, 10);
+      const val = +raw;
+      if (takeMax) {
+        if (popByDate[date] == null || val > popByDate[date]) popByDate[date] = val;
+      } else if (popByDate[date] == null) {
+        popByDate[date] = val;
       }
     });
-  }
+  };
+  // j[0] = short-term (3 days, 6-hourly pops) — highest priority
+  const shortTs = findTs(j[0]?.timeSeries || [], 'pops');
+  addPops(shortTs, true);
+  // j[1] = weekly pops — fill in remaining days
+  const weekly = j[1];
+  const weeklyPopTs = findTs(weekly.timeSeries, 'pops');
+  addPops(weeklyPopTs, false);
 
-  // Build temp lookup by date
+  // Weather codes from weekly
+  const ts0 = findTs(weekly.timeSeries, 'weatherCodes') || weekly.timeSeries[0];
+  const area0 = findArea(ts0, 'weatherCodes') || ts0?.areas[0];
+
+  // Temps from weekly
+  const ts2 = findTs(weekly.timeSeries, 'tempsMin') || findTs(weekly.timeSeries, 'tempsMax');
+  const area2 = findArea(ts2, 'tempsMin') || findArea(ts2, 'tempsMax');
   const tempByDate = {};
   if (ts2 && area2) {
     ts2.timeDefines.forEach((iso, i) => {
@@ -657,11 +679,8 @@ function renderDayCell(srcId, date, isToday) {
   </div></td>`;
 }
 
-const SRC_COLOR = { msm: '#7c3aed', ecmwf: '#2563eb', gfs: '#16a34a', wttr: '#ea580c' };
-
 function renderHourlyPanel(date, label) {
-  // jma has no hourly data — show the other 4 sources
-  const hourSources = SOURCES.filter(s => s.id !== 'jma');
+  const hourSources = HOURLY_SOURCES;
 
   // Collect data per source per hour
   const srcData = {};
@@ -722,7 +741,7 @@ function renderHourlyPanel(date, label) {
     if (!d) return;
     const pts = hours.filter(h => d[h]?.rainProb != null);
     if (pts.length < 1) return;
-    const color = SRC_COLOR[src.id] || '#888';
+    const color = src.color || '#888';
 
     if (pts.length >= 2) {
       const linePoints = pts.map(h => `${xOf(h)},${yOfR(d[h].rainProb)}`).join(' ');
@@ -750,7 +769,7 @@ function renderHourlyPanel(date, label) {
   const legendY = 11;
   hourSources.forEach(src => {
     if (!srcData[src.id]) return;
-    const color = SRC_COLOR[src.id] || '#888';
+    const color = src.color || '#888';
     svg += `<line x1="${lx}" y1="${legendY}" x2="${lx+20}" y2="${legendY}" stroke="${color}" stroke-width="2.2"/>`;
     svg += `<circle cx="${lx+10}" cy="${legendY}" r="3.5" fill="${color}" stroke="#fff" stroke-width="1"/>`;
     svg += `<text x="${lx+25}" y="${legendY+4}" font-size="10" fill="#374151">${esc(src.name)}</text>`;
