@@ -177,7 +177,7 @@ tr:nth-child(even) td.day-cell { background: #fafbfc; }
 td.day-cell.today-col { background: #f0f7ff; }
 
 .cell-inner { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.cell-emoji { font-size: 22px; line-height: 1; }
+.cell-emoji { font-size: 30px; line-height: 1.1; }
 .cell-temp  { font-size: 12px; font-weight: 600; }
 .cell-temp .hi { color: var(--hi-color); }
 .cell-temp .lo { color: var(--lo-color); }
@@ -285,19 +285,44 @@ td.day-cell.today-col { background: #f0f7ff; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
 /* ── MOBILE ── */
-@media (max-width: 600px) {
+@media (max-width: 640px) {
   .app-header { padding: 10px 12px; gap: 8px; }
   .app-logo { font-size: 15px; }
-  input[type=text] { font-size: 13px; padding: 6px 8px; }
-  button { padding: 6px 10px; font-size: 12px; }
-  #app { padding: 8px; }
-  th.src-col, td.src-col { width: 80px; min-width: 70px; padding: 6px 6px; }
-  td.src-col .src-name { font-size: 11px; }
-  td.src-col .src-sub  { font-size: 9px; }
-  td.day-cell { min-width: 90px; padding: 6px 4px; }
-  .cell-emoji { font-size: 18px; }
-  .rain-badge { font-size: 12px; padding: 2px 6px; min-width: 44px; }
-  th.day-hdr { min-width: 90px; }
+  .app-logo small { display: none; }
+  input[type=text] { font-size: 14px; padding: 8px 10px; }
+  button { padding: 8px 10px; font-size: 13px; }
+  #app { padding: 6px; }
+
+  /* Source column: very narrow, initials only */
+  th.src-col, td.src-col {
+    width: 52px; min-width: 52px; padding: 4px 4px;
+    font-size: 10px;
+  }
+  td.src-col .src-name { font-size: 10px; letter-spacing: 0; }
+  td.src-col .src-sub  { display: none; }
+
+  /* Day columns: compact */
+  th.day-hdr { min-width: 72px; padding: 5px 2px 4px; font-size: 11px; }
+  th.day-hdr .dlabel { font-size: 11px; }
+  th.day-hdr .dtoggle { font-size: 9px; }
+  td.day-cell { min-width: 72px; padding: 5px 2px; }
+  .cell-emoji { font-size: 24px; }
+  .cell-temp { font-size: 11px; }
+  .rain-badge { font-size: 12px; padding: 2px 5px; min-width: 40px; }
+  .rain-mm { display: none; }
+  .cell-desc { display: none; }
+
+  /* Hourly table: compact */
+  .hourly-tbl { font-size: 11px; }
+  .hourly-tbl th, .hourly-tbl td { padding: 4px 4px; }
+  .h-time { padding-left: 6px !important; }
+  .h-rain { font-size: 11px; padding: 1px 4px; min-width: 34px; }
+  .h-temp { font-size: 10px; }
+  .h-mm { display: none; }
+
+  /* Legend: wrap */
+  .legend { font-size: 10px; gap: 6px; }
+  .legend span[style] { display: none; }
 }
 </style>
 </head>
@@ -422,16 +447,17 @@ function rainColor(p) {
 
 function wmoEmoji(c) {
   c = +c;
-  if (c === 0)              return '☀️';
-  if (c <= 2)               return '🌤️';
-  if (c === 3)              return '☁️';
-  if (c===45||c===48)       return '🌫️';
-  if (c>=51&&c<=55)         return '🌦️';
-  if (c>=61&&c<=65)         return '🌧️';
-  if (c>=71&&c<=75)         return '❄️';
-  if (c>=80&&c<=82)         return '🌧️';
-  if (c===95)               return '⛈️';
-  return '🌡️';
+  if (c === 0)                      return '☀️';
+  if (c <= 2)                       return '🌤️';
+  if (c === 3)                      return '☁️';
+  if (c === 45 || c === 48)         return '🌫️';
+  if (c >= 51 && c <= 57)           return '🌦️';  // drizzle + freezing drizzle
+  if (c >= 61 && c <= 67)           return '🌧️';  // rain + freezing rain
+  if (c >= 71 && c <= 77)           return '❄️';
+  if (c >= 80 && c <= 82)           return '🌧️';
+  if (c === 85 || c === 86)         return '❄️';
+  if (c === 95 || c === 96 || c === 99) return '⛈️';
+  return '⛅';
 }
 
 // WWO weather codes used by wttr.in (different from WMO)
@@ -443,15 +469,14 @@ function wttrEmoji(code) {
   if (code === 143 || code === 248 || code === 260) return '🌫️';
   if ([200,386,389,392,395].includes(code)) return '⛈️';
   if ([227,230,323,326,329,332,335,338,350,368,371,374,377].includes(code)) return '❄️';
-  if ([179,182,185,317,320,362,365].includes(code)) return '🌨️';
+  if ([179,182,185,281,284,317,320,362,365].includes(code)) return '🌨️';
   if ([176,263,266,293,353].includes(code)) return '🌦️';
-  if (code >= 296) return '🌧️';
-  return '🌡️';
+  if (code >= 281) return '🌧️';
+  return '⛅';
 }
 
 function jmaEmoji(code) {
   const c = +code;
-  if (!c) return '🌡️';
   if (c >= 400) return '❄️';
   if (c >= 300) return '🌧️';
   if (c >= 200) {
@@ -464,7 +489,7 @@ function jmaEmoji(code) {
     if (c >= 130) return '🌤️';
     return '☀️';
   }
-  return '🌡️';
+  return '⛅';
 }
 
 function localDateStr(d) {
@@ -509,33 +534,58 @@ async function fetchJMA(admin1) {
   const j = await r.json();
 
   // j[1] = weekly forecast
+  // timeSeries[0] = weather codes (7 days)
+  // timeSeries[1] = pops (降水確率)
+  // timeSeries[2] = temps (min/max)
   const weekly = j[1];
-  const ts0 = weekly.timeSeries[0]; // weather codes + pops
-  const ts1 = weekly.timeSeries[1]; // temps
+  const ts0 = weekly.timeSeries[0];
+  const ts1 = weekly.timeSeries[1]; // pops
+  const ts2 = weekly.timeSeries[2]; // temps
 
   const area0 = ts0.areas[0];
-  const area1 = ts1.areas[0];
+  const area1 = ts1?.areas[0];
+  const area2 = ts2?.areas[0];
+
+  // Build pop lookup by date (timeDefines may differ between series)
+  const popByDate = {};
+  if (ts1 && area1?.pops) {
+    ts1.timeDefines.forEach((iso, i) => {
+      const raw = area1.pops[i];
+      if (raw != null && raw !== '' && raw !== '--') {
+        popByDate[iso.slice(0, 10)] = +raw;
+      }
+    });
+  }
+
+  // Build temp lookup by date
+  const tempByDate = {};
+  if (ts2 && area2) {
+    ts2.timeDefines.forEach((iso, i) => {
+      const min = area2.tempsMin?.[i];
+      const max = area2.tempsMax?.[i];
+      tempByDate[iso.slice(0, 10)] = {
+        min: (min != null && min !== '') ? +min : null,
+        max: (max != null && max !== '') ? +max : null,
+      };
+    });
+  }
 
   const daily = ts0.timeDefines.map((iso, i) => {
     const date = iso.slice(0, 10);
     const weatherCode = area0.weatherCodes?.[i] || '0';
     const weather     = area0.weathers?.[i] || '';
-    const rawPop = area0.pops?.[i];
-    const pop = (rawPop != null && rawPop !== '' && rawPop !== '--') ? +rawPop : null;
-    const minTemp     = area1.tempsMin?.[i] != null && area1.tempsMin[i] !== '' ? +area1.tempsMin[i] : null;
-    const maxTemp     = area1.tempsMax?.[i] != null && area1.tempsMax[i] !== '' ? +area1.tempsMax[i] : null;
+    const temps = tempByDate[date] || {};
     return {
       date,
-      maxTemp: maxTemp != null ? Math.round(maxTemp) : null,
-      minTemp: minTemp != null ? Math.round(minTemp) : null,
-      rainProb: pop,
-      rainMM: null,
-      emoji: jmaEmoji(weatherCode),
-      desc: weather.replace(/\s+/g, ' ').trim(),
+      maxTemp:  temps.max != null ? Math.round(temps.max) : null,
+      minTemp:  temps.min != null ? Math.round(temps.min) : null,
+      rainProb: popByDate[date] ?? null,
+      rainMM:   null,
+      emoji:    jmaEmoji(weatherCode),
+      desc:     weather.replace(/\s+/g, ' ').trim(),
     };
   });
 
-  // JMA has no hourly data - return empty hourly map
   return { daily, hourly: {} };
 }
 
