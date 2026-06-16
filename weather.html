@@ -139,23 +139,6 @@ button.primary { border-color: var(--orange); font-weight: bold; letter-spacing:
 .status-bar .active { color: var(--orange); text-shadow: 0 0 6px rgba(232,100,0,0.4); }
 .status-bar .loading { animation: pulse 1s infinite; }
 
-/* SETTINGS */
-#settings-panel {
-  display: none;
-  background: rgba(232,100,0,0.04);
-  border: 1px solid var(--border2);
-  padding: 12px 14px;
-  margin-bottom: 12px;
-}
-#settings-panel.open { display: block; }
-#settings-panel h3 { letter-spacing: 2px; margin-bottom: 10px; font-size: 11px; color: var(--text-dim); }
-.s-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
-.s-row label { width: 130px; color: var(--text-dim); letter-spacing: 1px; font-size: 11px; flex-shrink: 0; }
-.s-row input[type=text] { width: 280px; font-size: 12px; }
-.s-row a { color: #4db8e8; font-size: 10px; text-decoration: none; }
-.s-row a:hover { text-decoration: underline; }
-.save-note { font-size: 10px; color: var(--text-faint); margin-top: 4px; }
-
 /* TABLE */
 .table-wrapper { overflow-x: auto; border: 1px solid var(--border2); }
 
@@ -202,6 +185,7 @@ td.day-cell {
 .cell-temp  { font-size: 11px; }
 .cell-temp .hi { color: #ff9944; }
 .cell-temp .lo { color: #88aacc; }
+.cell-desc { font-size: 9px; color: var(--text-dim); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .rain-badge {
   display: inline-block;
@@ -219,9 +203,6 @@ td.day-cell {
 .c-loading { color: var(--text-faint); font-size: 10px; letter-spacing: 1px; animation: pulse 1s infinite; }
 .c-error   { color: #cc2222; font-size: 10px; cursor: help; letter-spacing: 1px; }
 .c-nodata  { color: var(--text-faint); font-size: 12px; }
-.c-keyreq  { font-size: 10px; line-height: 1.6; color: var(--text-dim); }
-.c-keyreq a { color: #4db8e8; text-decoration: none; }
-.c-keyreq a:hover { text-decoration: underline; }
 
 /* HOURLY PANEL */
 tr.hourly-row td { background: #050507; padding: 0; }
@@ -271,25 +252,6 @@ td.hourly-span { padding: 0; }
       <button class="icon-btn" id="geo-btn" title="現在地">📍</button>
       <button class="primary" id="scan-btn">SCAN</button>
     </div>
-    <button class="icon-btn" id="settings-btn" title="API設定">⚙</button>
-  </div>
-
-  <div id="settings-panel">
-    <h3>── API KEY CONFIGURATION ──</h3>
-    <div class="s-row">
-      <label>OWM KEY</label>
-      <input type="text" id="owm-key" placeholder="OpenWeatherMap API key">
-      <a href="https://home.openweathermap.org/users/sign_up" target="_blank">[無料登録]</a>
-    </div>
-    <div class="s-row">
-      <label>WEATHERAPI KEY</label>
-      <input type="text" id="wapi-key" placeholder="WeatherAPI.com API key">
-      <a href="https://www.weatherapi.com/signup.aspx" target="_blank">[無料登録]</a>
-    </div>
-    <div class="s-row" style="margin-top:8px">
-      <button id="save-keys-btn" style="letter-spacing:2px;font-size:11px">SAVE &amp; RESCAN</button>
-      <span class="save-note">Keys stored in localStorage</span>
-    </div>
   </div>
 
   <div class="status-bar" id="status">──</div>
@@ -311,25 +273,70 @@ td.hourly-span { padding: 0; }
 const DOW = ['日','月','火','水','木','金','土'];
 
 const SOURCES = [
-  { id:'gfs',   name:'Open-Meteo', sub:'GFS',        key: null },
-  { id:'ecmwf', name:'Open-Meteo', sub:'ECMWF',      key: null },
-  { id:'owm',   name:'OWM',        sub:'OpenWeather', key:'owm' },
-  { id:'wapi',  name:'WeatherAPI', sub:'wapi.com',    key:'wapi' },
-  { id:'wttr',  name:'wttr.in',    sub:'3日のみ',     key: null },
+  { id:'jma',   name:'気象庁',    sub:'公式API'       },
+  { id:'msm',   name:'気象庁MSM', sub:'Open-Meteo'    },
+  { id:'ecmwf', name:'ECMWF',     sub:'Open-Meteo'    },
+  { id:'gfs',   name:'GFS (NOAA)',sub:'Open-Meteo'    },
+  { id:'wttr',  name:'wttr.in',   sub:'3日分'         },
 ];
 
-const KEY_SIGNUP = {
-  owm:  'https://home.openweathermap.org/users/sign_up',
-  wapi: 'https://www.weatherapi.com/signup.aspx',
+const JMA_AREA_CODES = {
+  '北海道': '016000',
+  '青森県': '020000', '青森': '020000',
+  '岩手県': '030000', '岩手': '030000',
+  '宮城県': '040000', '宮城': '040000',
+  '秋田県': '050000', '秋田': '050000',
+  '山形県': '060000', '山形': '060000',
+  '福島県': '070000', '福島': '070000',
+  '茨城県': '080000', '茨城': '080000',
+  '栃木県': '090000', '栃木': '090000',
+  '群馬県': '100000', '群馬': '100000',
+  '埼玉県': '110000', '埼玉': '110000',
+  '千葉県': '120000', '千葉': '120000',
+  '東京都': '130000', '東京': '130000',
+  '神奈川県': '140000', '神奈川': '140000',
+  '新潟県': '150000', '新潟': '150000',
+  '富山県': '160000', '富山': '160000',
+  '石川県': '170000', '石川': '170000',
+  '福井県': '180000', '福井': '180000',
+  '山梨県': '190000', '山梨': '190000',
+  '長野県': '200000', '長野': '200000',
+  '岐阜県': '210000', '岐阜': '210000',
+  '静岡県': '220000', '静岡': '220000',
+  '愛知県': '230000', '愛知': '230000',
+  '三重県': '240000', '三重': '240000',
+  '滋賀県': '250000', '滋賀': '250000',
+  '京都府': '260000', '京都': '260000',
+  '大阪府': '270000', '大阪': '270000',
+  '兵庫県': '280000', '兵庫': '280000',
+  '奈良県': '290000', '奈良': '290000',
+  '和歌山県': '300000', '和歌山': '300000',
+  '鳥取県': '310000', '鳥取': '310000',
+  '島根県': '320000', '島根': '320000',
+  '岡山県': '330000', '岡山': '330000',
+  '広島県': '340000', '広島': '340000',
+  '山口県': '350000', '山口': '350000',
+  '徳島県': '360000', '徳島': '360000',
+  '香川県': '370000', '香川': '370000',
+  '愛媛県': '380000', '愛媛': '380000',
+  '高知県': '390000', '高知': '390000',
+  '福岡県': '400000', '福岡': '400000',
+  '佐賀県': '410000', '佐賀': '410000',
+  '長崎県': '420000', '長崎': '420000',
+  '熊本県': '430000', '熊本': '430000',
+  '大分県': '440000', '大分': '440000',
+  '宮崎県': '450000', '宮崎': '450000',
+  '鹿児島県': '460100', '鹿児島': '460100',
+  '沖縄県': '471000', '沖縄': '471000',
 };
 
 // ── STATE ──────────────────────────────────────────────────────────────
 const st = {
   lat: 35.6895, lon: 139.6917, city: '東京',
-  days: [],       // [{date,label,isToday,isTomorrow}]
-  data: {},       // {gfs:{daily,hourly}|{error}, ...}
-  expanded: {},   // {date:bool}
-  keys: { owm:'', wapi:'' },
+  admin1: '東京都',   // prefecture from geocoding
+  days: [],           // [{date,label,isToday,isTomorrow}]
+  data: {},           // {srcId:{daily,hourly}|{error}, ...}
+  expanded: {},       // {date:bool}
 };
 
 // ── HELPERS ────────────────────────────────────────────────────────────
@@ -355,33 +362,33 @@ function wmoEmoji(c) {
   return '🌡️';
 }
 
-function owmEmoji(icon) {
-  const i = (icon||'').slice(0,2);
-  const map = {'01':'☀️','02':'🌤️','03':'⛅','04':'☁️','09':'🌦️','10':'🌧️','11':'⛈️','13':'❄️','50':'🌫️'};
-  return map[i] || '🌡️';
-}
-
-function wapiEmoji(code) {
-  code = +code;
-  if (code===1000) return '☀️';
-  if ([1003,1006].includes(code)) return '🌤️';
-  if (code===1009) return '☁️';
-  if ([1030,1135,1147].includes(code)) return '🌫️';
-  if (code>=1063&&code<=1183) return '🌦️';
-  if (code>=1186&&code<=1246) return '🌧️';
-  if (code>=1114&&code<=1258&&[1114,1117,1210,1213,1216,1219,1222,1225,1255,1258].includes(code)) return '❄️';
-  if ([1087,1273,1276,1279,1282].includes(code)) return '⛈️';
+function jmaEmoji(code) {
+  const c = +code;
+  if (!c) return '🌡️';
+  if (c >= 400) return '❄️';
+  if (c >= 300) return '🌧️';
+  if (c >= 200) {
+    if (c >= 260) return '🌨️';
+    if (c >= 230) return '🌦️';
+    return '⛅';
+  }
+  if (c >= 100) {
+    if (c >= 160) return '🌦️';
+    if (c >= 130) return '🌤️';
+    return '☀️';
+  }
   return '🌡️';
 }
 
 function localDateStr(d) {
-  // YYYY-MM-DD in local time zone
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+function round1(n) { return Math.round(+n * 10) / 10; }
 
 function buildDays() {
   const days = [];
@@ -397,21 +404,53 @@ function buildDays() {
   return days;
 }
 
-function saveKeys() { localStorage.setItem('nerv_weather_keys', JSON.stringify(st.keys)); }
-function loadKeys() {
-  try { const s = localStorage.getItem('nerv_weather_keys'); if (s) Object.assign(st.keys, JSON.parse(s)); } catch(_) {}
-}
-
 // ── GEOCODING ──────────────────────────────────────────────────────────
 async function geocode(city) {
   const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=ja&format=json`);
   const j = await r.json();
   if (!j.results?.length) throw new Error('都市が見つかりません: ' + city);
-  const { latitude: lat, longitude: lon, name } = j.results[0];
-  return { lat, lon, name };
+  const { latitude: lat, longitude: lon, name, admin1 } = j.results[0];
+  return { lat, lon, name, admin1: admin1 || '' };
 }
 
 // ── FETCHERS ───────────────────────────────────────────────────────────
+async function fetchJMA(admin1) {
+  const areaCode = JMA_AREA_CODES[admin1] || '130000';
+  const url = `https://www.jma.go.jp/bosai/forecast/data/forecast/${areaCode}.json`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+
+  // j[1] = weekly forecast
+  const weekly = j[1];
+  const ts0 = weekly.timeSeries[0]; // weather codes + pops
+  const ts1 = weekly.timeSeries[1]; // temps
+
+  const area0 = ts0.areas[0];
+  const area1 = ts1.areas[0];
+
+  const daily = ts0.timeDefines.map((iso, i) => {
+    const date = iso.slice(0, 10);
+    const weatherCode = area0.weatherCodes?.[i] || '0';
+    const weather     = area0.weathers?.[i] || '';
+    const pop         = area0.pops?.[i] != null ? +area0.pops[i] : null;
+    const minTemp     = area1.tempsMin?.[i] != null && area1.tempsMin[i] !== '' ? +area1.tempsMin[i] : null;
+    const maxTemp     = area1.tempsMax?.[i] != null && area1.tempsMax[i] !== '' ? +area1.tempsMax[i] : null;
+    return {
+      date,
+      maxTemp: maxTemp != null ? Math.round(maxTemp) : null,
+      minTemp: minTemp != null ? Math.round(minTemp) : null,
+      rainProb: pop,
+      rainMM: null,
+      emoji: jmaEmoji(weatherCode),
+      desc: weather.replace(/\s+/g, ' ').trim(),
+    };
+  });
+
+  // JMA has no hourly data - return empty hourly map
+  return { daily, hourly: {} };
+}
+
 async function fetchOpenMeteo(lat, lon, model) {
   const mp = model ? `&models=${model}` : '';
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&hourly=temperature_2m,precipitation,precipitation_probability,weather_code&timezone=Asia%2FTokyo&forecast_days=7${mp}`;
@@ -421,11 +460,12 @@ async function fetchOpenMeteo(lat, lon, model) {
 
   const daily = j.daily.time.map((date, i) => ({
     date,
-    maxTemp: Math.round(j.daily.temperature_2m_max[i] ?? 0),
-    minTemp: Math.round(j.daily.temperature_2m_min[i] ?? 0),
+    maxTemp:  Math.round(j.daily.temperature_2m_max[i] ?? 0),
+    minTemp:  Math.round(j.daily.temperature_2m_min[i] ?? 0),
     rainProb: j.daily.precipitation_probability_max[i] ?? null,
     rainMM:   round1(j.daily.precipitation_sum[i] ?? 0),
-    emoji: wmoEmoji(j.daily.weather_code[i]),
+    emoji:    wmoEmoji(j.daily.weather_code[i]),
+    desc:     '',
   }));
 
   const hourly = {};
@@ -444,69 +484,6 @@ async function fetchOpenMeteo(lat, lon, model) {
   return { daily, hourly };
 }
 
-async function fetchOWM(lat, lon, key) {
-  const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${key}&units=metric&lang=ja&cnt=40`;
-  const r = await fetch(url);
-  const j = await r.json();
-  if (!r.ok) throw new Error(j.message || `HTTP ${r.status}`);
-
-  const byDate = {};
-  j.list.forEach(item => {
-    const dt = new Date(item.dt * 1000);
-    const date = localDateStr(dt);
-    const hour = dt.getHours();
-    (byDate[date] = byDate[date]||[]).push({
-      hour,
-      temp:     Math.round(item.main.temp),
-      maxTemp:  Math.round(item.main.temp_max),
-      minTemp:  Math.round(item.main.temp_min),
-      rainProb: Math.round((item.pop||0)*100),
-      rainMM:   round1((item.rain&&item.rain['3h'])||0),
-      emoji:    owmEmoji(item.weather[0]?.icon||''),
-    });
-  });
-
-  const daily = Object.entries(byDate).map(([date, hrs]) => ({
-    date,
-    maxTemp:  Math.max(...hrs.map(h=>h.maxTemp)),
-    minTemp:  Math.min(...hrs.map(h=>h.minTemp)),
-    rainProb: Math.max(...hrs.map(h=>h.rainProb)),
-    rainMM:   round1(hrs.reduce((s,h)=>s+h.rainMM,0)),
-    emoji:    (hrs.find(h=>h.hour>=12)||hrs[0]).emoji,
-  }));
-
-  return { daily, hourly: byDate };
-}
-
-async function fetchWeatherAPI(lat, lon, key) {
-  const url = `https://api.weatherapi.com/v1/forecast.json?key=${key}&q=${lat},${lon}&days=7&lang=ja`;
-  const r = await fetch(url);
-  const j = await r.json();
-  if (!r.ok) throw new Error((j.error&&j.error.message)||`HTTP ${r.status}`);
-
-  const daily = j.forecast.forecastday.map(fd => ({
-    date:     fd.date,
-    maxTemp:  Math.round(fd.day.maxtemp_c),
-    minTemp:  Math.round(fd.day.mintemp_c),
-    rainProb: Math.round(fd.day.daily_chance_of_rain||0),
-    rainMM:   round1(fd.day.totalprecip_mm||0),
-    emoji:    wapiEmoji(fd.day.condition.code),
-  }));
-
-  const hourly = {};
-  j.forecast.forecastday.forEach(fd => {
-    hourly[fd.date] = fd.hour.map(h => ({
-      hour:     new Date(h.time_epoch*1000).getHours(),
-      temp:     Math.round(h.temp_c),
-      rainProb: Math.round(h.chance_of_rain||0),
-      rainMM:   round1(h.precip_mm||0),
-      emoji:    wapiEmoji(h.condition.code),
-    }));
-  });
-
-  return { daily, hourly };
-}
-
 async function fetchWttr(lat, lon) {
   const url = `https://wttr.in/${lat},${lon}?format=j1`;
   const r = await fetch(url);
@@ -514,6 +491,7 @@ async function fetchWttr(lat, lon) {
   const j = await r.json();
 
   const now = new Date();
+  // wttr.in only returns 3 days
   const daily = j.weather.map((day, i) => {
     const d = new Date(now); d.setDate(now.getDate()+i);
     const date = localDateStr(d);
@@ -527,7 +505,8 @@ async function fetchWttr(lat, lon) {
       minTemp:  Math.round(+day.mintempC),
       rainProb,
       rainMM,
-      emoji:    wmoEmoji(+( midHour.weatherCode||0 )),
+      emoji:    wmoEmoji(+(midHour.weatherCode||0)),
+      desc:     '',
     };
   });
 
@@ -547,8 +526,6 @@ async function fetchWttr(lat, lon) {
   return { daily, hourly };
 }
 
-function round1(n) { return Math.round(+n * 10) / 10; }
-
 // ── RENDER HELPERS ─────────────────────────────────────────────────────
 function rainBadge(prob) {
   if (prob == null) return `<span class="rain-badge" style="background:var(--rain-none)">--%</span>`;
@@ -561,34 +538,36 @@ function hRain(prob) {
 }
 
 function renderDayCell(srcId, date) {
-  const src = SOURCES.find(s=>s.id===srcId);
-
-  // Key check
-  if (src.key) {
-    if (!st.keys[src.key]) {
-      return `<td class="day-cell"><div class="c-keyreq">KEY REQUIRED<br><a href="${KEY_SIGNUP[src.key]}" target="_blank">[取得]</a></div></td>`;
-    }
-  }
-
   const sd = st.data[srcId];
   if (!sd) return `<td class="day-cell"><span class="c-loading">LOADING</span></td>`;
   if (sd.error) return `<td class="day-cell"><span class="c-error" title="${esc(sd.error)}">ERROR</span></td>`;
 
-  const day = sd.daily?.find(d=>d.date===date);
+  const day = sd.daily?.find(d => d.date === date);
   if (!day) return `<td class="day-cell"><span class="c-nodata">─</span></td>`;
+
+  const tempStr = (day.maxTemp != null && day.minTemp != null)
+    ? `<span class="hi">${day.maxTemp}°</span>/<span class="lo">${day.minTemp}°</span>`
+    : (day.maxTemp != null ? `<span class="hi">${day.maxTemp}°</span>` : '<span style="color:var(--text-faint)">─</span>');
+
+  const mmStr = srcId === 'jma' ? '' : `<span class="rain-mm">${day.rainMM}mm</span>`;
+  const descStr = (srcId === 'jma' && day.desc)
+    ? `<span class="cell-desc" title="${esc(day.desc)}">${esc(day.desc)}</span>`
+    : '';
 
   return `<td class="day-cell"><div class="cell-inner">
     <span class="cell-emoji">${day.emoji}</span>
-    <span class="cell-temp"><span class="hi">${day.maxTemp}°</span>/<span class="lo">${day.minTemp}°</span></span>
+    <span class="cell-temp">${tempStr}</span>
     ${rainBadge(day.rainProb)}
-    <span class="rain-mm">${day.rainMM}mm</span>
+    ${mmStr}
+    ${descStr}
   </div></td>`;
 }
 
 function renderHourlyPanel(date) {
-  // Collect all hour values across sources
+  // JMA has no hourly — exclude from hour set collection
+  const hourSources = SOURCES.filter(s => s.id !== 'jma');
   const hourSet = new Set();
-  SOURCES.forEach(src => {
+  hourSources.forEach(src => {
     const sd = st.data[src.id];
     if (sd && !sd.error && sd.hourly?.[date]) {
       sd.hourly[date].forEach(h => hourSet.add(h.hour));
@@ -606,9 +585,9 @@ function renderHourlyPanel(date) {
   hours.forEach(hour => {
     html += `<tr><td class="h-time">${String(hour).padStart(2,'0')}:00</td>`;
     SOURCES.forEach(src => {
-      const srcDef = SOURCES.find(s=>s.id===src.id);
-      if (srcDef.key && !st.keys[srcDef.key]) {
-        html += `<td><span class="h-empty">KEY</span></td>`; return;
+      // JMA has no hourly data
+      if (src.id === 'jma') {
+        html += `<td><span class="h-empty">─</span></td>`; return;
       }
       const sd = st.data[src.id];
       if (!sd)       { html += `<td><span class="h-empty">…</span></td>`; return; }
@@ -647,7 +626,6 @@ function renderTable() {
   // BODY
   let bodyHtml = '';
 
-  // Source rows
   SOURCES.forEach(src => {
     bodyHtml += `<tr>
       <td class="src-col">
@@ -685,7 +663,7 @@ function setStatus(msg, type) {
 
 // ── FETCH ALL ──────────────────────────────────────────────────────────
 async function fetchAll() {
-  const { lat, lon } = st;
+  const { lat, lon, admin1 } = st;
   document.getElementById('loading-ov').classList.add('show');
   setStatus(`${st.city} (${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E) — SCANNING...`, 'loading');
 
@@ -695,10 +673,10 @@ async function fetchAll() {
   renderTable();
 
   const tasks = {
-    gfs:   fetchOpenMeteo(lat, lon, null),
+    jma:   fetchJMA(admin1),
+    msm:   fetchOpenMeteo(lat, lon, 'jma_seamless'),
     ecmwf: fetchOpenMeteo(lat, lon, 'ecmwf_ifs025'),
-    owm:   st.keys.owm  ? fetchOWM(lat, lon, st.keys.owm)          : Promise.reject(Object.assign(new Error('NO_KEY'),{noKey:true})),
-    wapi:  st.keys.wapi ? fetchWeatherAPI(lat, lon, st.keys.wapi)   : Promise.reject(Object.assign(new Error('NO_KEY'),{noKey:true})),
+    gfs:   fetchOpenMeteo(lat, lon, null),
     wttr:  fetchWttr(lat, lon),
   };
 
@@ -707,10 +685,9 @@ async function fetchAll() {
     const res = results[i];
     if (res.status === 'fulfilled') {
       st.data[id] = res.value;
-    } else if (!res.reason?.noKey) {
+    } else {
       st.data[id] = { error: res.reason?.message || 'Unknown error' };
     }
-    // noKey → leave undefined so renderDayCell shows KEY REQUIRED
   });
 
   document.getElementById('loading-ov').classList.remove('show');
@@ -725,13 +702,16 @@ async function doScan() {
   document.getElementById('loading-ov').classList.add('show');
   try {
     const geo = await geocode(city);
-    st.lat = geo.lat; st.lon = geo.lon; st.city = geo.name || city;
+    st.lat    = geo.lat;
+    st.lon    = geo.lon;
+    st.city   = geo.name || city;
+    st.admin1 = geo.admin1 || '';
     st.days = buildDays();
     await fetchAll();
   } catch(e) {
-    // Geocoding failed — fall back to default Tokyo coordinates and proceed
     setStatus(`ジオコーディング失敗 (${e.message})。デフォルト座標(東京)で試みます...`, 'loading');
-    st.city = city;
+    st.city   = city;
+    st.admin1 = '';
     st.days = buildDays();
     await fetchAll();
   }
@@ -741,9 +721,10 @@ async function doGeo() {
   if (!navigator.geolocation) { setStatus('Geolocation not supported'); return; }
   setStatus('Requesting geolocation...', 'loading');
   navigator.geolocation.getCurrentPosition(async pos => {
-    st.lat = pos.coords.latitude;
-    st.lon = pos.coords.longitude;
-    st.city = `${st.lat.toFixed(3)}°N,${st.lon.toFixed(3)}°E`;
+    st.lat    = pos.coords.latitude;
+    st.lon    = pos.coords.longitude;
+    st.city   = `${st.lat.toFixed(3)}°N,${st.lon.toFixed(3)}°E`;
+    st.admin1 = '';
     document.getElementById('city-input').value = st.city;
     st.days = buildDays();
     await fetchAll();
@@ -754,25 +735,9 @@ async function doGeo() {
 
 // ── INIT ───────────────────────────────────────────────────────────────
 (function init() {
-  loadKeys();
-  document.getElementById('owm-key').value  = st.keys.owm  || '';
-  document.getElementById('wapi-key').value = st.keys.wapi || '';
-
   document.getElementById('scan-btn').addEventListener('click', doScan);
   document.getElementById('city-input').addEventListener('keydown', e => { if(e.key==='Enter') doScan(); });
   document.getElementById('geo-btn').addEventListener('click', doGeo);
-
-  document.getElementById('settings-btn').addEventListener('click', () => {
-    document.getElementById('settings-panel').classList.toggle('open');
-  });
-
-  document.getElementById('save-keys-btn').addEventListener('click', () => {
-    st.keys.owm  = document.getElementById('owm-key').value.trim();
-    st.keys.wapi = document.getElementById('wapi-key').value.trim();
-    saveKeys();
-    document.getElementById('settings-panel').classList.remove('open');
-    doScan();
-  });
 
   st.days = buildDays();
   doScan();
