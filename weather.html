@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NERV :: WEATHER INTEL SYSTEM</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:           #040404;
+  --orange:       #e86400;
+  --orange-dim:   rgba(232,100,0,0.13);
+  --orange-faint: rgba(232,100,0,0.055);
+  --text:         #e86400;
+  --text-dim:     rgba(232,100,0,0.5);
+  --text-faint:   rgba(232,100,0,0.22);
+  --border:       rgba(232,100,0,0.22);
+  --border2:      rgba(232,100,0,0.5);
+  --rain-none:    rgba(100,100,100,0.5);
+  --rain-low:     #4db8e8;
+  --rain-mid:     #1e7abf;
+  --rain-high:    #0d3f8f;
+  --rain-max:     #4a00a0;
+}
+
+@keyframes flicker {
+  0%,94%,100% { opacity:1; }
+  95% { opacity:.97; }
+  97% { opacity:.98; }
+  99% { opacity:.96; }
+}
+@keyframes scan {
+  0%   { background-position: 0 0; }
+  100% { background-position: 0 4000px; }
+}
+@keyframes pulse {
+  0%,100% { opacity:1; }
+  50%      { opacity:0.4; }
+}
+
+body {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--orange-faint) 1px, transparent 1px),
+    linear-gradient(90deg, var(--orange-faint) 1px, transparent 1px);
+  background-size: 44px 44px;
+  color: var(--text);
+  font-family: 'Courier New', Consolas, 'Lucida Console', monospace;
+  min-height: 100vh;
+  padding: 16px;
+  animation: flicker 10s infinite;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 3px,
+    rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 4px
+  );
+  pointer-events: none;
+  z-index: 1000;
+}
+body::after {
+  content: '';
+  position: fixed; left:0; right:0; top:0;
+  height: 120px;
+  background: linear-gradient(transparent, rgba(232,100,0,0.018), transparent);
+  animation: scan 6s linear infinite;
+  pointer-events: none;
+  z-index: 999;
+}
+
+#app { max-width: 1500px; margin: 0 auto; position: relative; z-index: 1; }
+
+/* HEADER */
+.nerv-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0 14px;
+  border-bottom: 1px solid var(--border2);
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.nerv-logo {
+  font-size: 20px;
+  font-weight: bold;
+  letter-spacing: 4px;
+  color: var(--orange);
+  text-shadow: 0 0 12px var(--orange);
+  flex-shrink: 0;
+  line-height: 1;
+}
+.nerv-logo small {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 2px;
+  opacity: 0.55;
+  margin-top: 3px;
+}
+.location-bar { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 240px; }
+
+input[type=text] {
+  background: rgba(232,100,0,0.07);
+  border: 1px solid var(--border2);
+  color: var(--orange);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 5px 8px;
+  outline: none;
+}
+input[type=text]:focus { border-color: var(--orange); box-shadow: 0 0 6px rgba(232,100,0,0.3); }
+input[type=text]::placeholder { color: var(--text-faint); }
+
+button {
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--orange);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 5px 10px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.15s;
+}
+button:hover { background: var(--orange-dim); }
+button.icon-btn { padding: 5px 8px; font-size: 15px; border-color: var(--border); }
+button.primary { border-color: var(--orange); font-weight: bold; letter-spacing: 2px; font-size: 13px; }
+
+.status-bar {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+  min-height: 15px;
+}
+.status-bar .active { color: var(--orange); text-shadow: 0 0 6px rgba(232,100,0,0.4); }
+.status-bar .loading { animation: pulse 1s infinite; }
+
+/* SETTINGS */
+#settings-panel {
+  display: none;
+  background: rgba(232,100,0,0.04);
+  border: 1px solid var(--border2);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+#settings-panel.open { display: block; }
+#settings-panel h3 { letter-spacing: 2px; margin-bottom: 10px; font-size: 11px; color: var(--text-dim); }
+.s-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.s-row label { width: 130px; color: var(--text-dim); letter-spacing: 1px; font-size: 11px; flex-shrink: 0; }
+.s-row input[type=text] { width: 280px; font-size: 12px; }
+.s-row a { color: #4db8e8; font-size: 10px; text-decoration: none; }
+.s-row a:hover { text-decoration: underline; }
+.save-note { font-size: 10px; color: var(--text-faint); margin-top: 4px; }
+
+/* TABLE */
+.table-wrapper { overflow-x: auto; border: 1px solid var(--border2); }
+
+table { border-collapse: collapse; width: 100%; min-width: 820px; font-size: 12px; }
+
+th, td { border: 1px solid var(--border); padding: 0; vertical-align: top; }
+
+th.src-col, td.src-col {
+  width: 100px; min-width: 85px;
+  padding: 6px 8px;
+  background: rgba(232,100,0,0.04);
+  position: sticky; left: 0; z-index: 2;
+  vertical-align: middle;
+  border-right-color: var(--border2);
+}
+td.src-col .src-name { color: var(--orange); display: block; font-size: 11px; font-weight: bold; letter-spacing: 1px; }
+td.src-col .src-sub  { font-size: 10px; color: var(--text-faint); letter-spacing: 0; }
+
+th.day-hdr {
+  text-align: center;
+  padding: 7px 4px 5px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  background: rgba(232,100,0,0.05);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+th.day-hdr:hover  { background: var(--orange-dim); }
+th.day-hdr.today  { border-top: 2px solid var(--orange); }
+th.day-hdr.today .dlabel { color: var(--orange); }
+th.day-hdr.expanded { background: rgba(232,100,0,0.1); }
+th.day-hdr .dlabel  { display: block; margin-bottom: 2px; }
+th.day-hdr .dtoggle { font-size: 9px; color: var(--text-faint); }
+
+td.day-cell {
+  text-align: center;
+  padding: 7px 4px;
+  min-width: 95px;
+  vertical-align: middle;
+}
+.cell-inner { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.cell-emoji { font-size: 18px; line-height: 1; }
+.cell-temp  { font-size: 11px; }
+.cell-temp .hi { color: #ff9944; }
+.cell-temp .lo { color: #88aacc; }
+
+.rain-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-size: 12px;
+  font-weight: bold;
+  color: #fff;
+  min-width: 44px;
+  text-align: center;
+  letter-spacing: 1px;
+}
+.rain-mm { font-size: 10px; color: #7799bb; }
+
+.c-loading { color: var(--text-faint); font-size: 10px; letter-spacing: 1px; animation: pulse 1s infinite; }
+.c-error   { color: #cc2222; font-size: 10px; cursor: help; letter-spacing: 1px; }
+.c-nodata  { color: var(--text-faint); font-size: 12px; }
+.c-keyreq  { font-size: 10px; line-height: 1.6; color: var(--text-dim); }
+.c-keyreq a { color: #4db8e8; text-decoration: none; }
+.c-keyreq a:hover { text-decoration: underline; }
+
+/* HOURLY PANEL */
+tr.hourly-row td { background: #050507; padding: 0; }
+td.hourly-span { padding: 0; }
+.hourly-scroll { overflow-x: auto; }
+.hourly-tbl { width: 100%; border-collapse: collapse; font-size: 11px; }
+.hourly-tbl th, .hourly-tbl td {
+  border: 1px solid rgba(232,100,0,0.1);
+  padding: 3px 5px;
+  text-align: center;
+  white-space: nowrap;
+}
+.hourly-tbl th { background: rgba(232,100,0,0.06); color: var(--text-dim); font-size: 10px; letter-spacing: 1px; }
+.hourly-tbl .h-time { color: var(--text-dim); font-size: 10px; text-align: left; padding-left: 8px; background: rgba(232,100,0,0.03); }
+.h-rain { display: inline-block; padding: 1px 4px; border-radius: 2px; color: #fff; font-weight: bold; font-size: 10px; min-width: 30px; }
+.h-temp { font-size: 10px; color: var(--text-dim); }
+.h-mm   { font-size: 10px; color: #7799bb; }
+.h-empty { color: var(--text-faint); font-size: 10px; }
+
+/* Loading overlay */
+#loading-ov {
+  display: none; position: fixed; inset: 0;
+  background: rgba(4,4,4,0.88);
+  z-index: 500; align-items: center; justify-content: center;
+  font-size: 20px; letter-spacing: 5px;
+  animation: pulse 0.8s infinite;
+}
+#loading-ov.show { display: flex; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); }
+::-webkit-scrollbar-thumb:hover { background: var(--orange); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="nerv-header">
+    <div class="nerv-logo">
+      NERV
+      <small>WEATHER INTEL SYSTEM</small>
+    </div>
+    <div class="location-bar">
+      <input type="text" id="city-input" placeholder="都市名 / City" value="東京" style="width:150px">
+      <button class="icon-btn" id="geo-btn" title="現在地">📍</button>
+      <button class="primary" id="scan-btn">SCAN</button>
+    </div>
+    <button class="icon-btn" id="settings-btn" title="API設定">⚙</button>
+  </div>
+
+  <div id="settings-panel">
+    <h3>── API KEY CONFIGURATION ──</h3>
+    <div class="s-row">
+      <label>OWM KEY</label>
+      <input type="text" id="owm-key" placeholder="OpenWeatherMap API key">
+      <a href="https://home.openweathermap.org/users/sign_up" target="_blank">[無料登録]</a>
+    </div>
+    <div class="s-row">
+      <label>WEATHERAPI KEY</label>
+      <input type="text" id="wapi-key" placeholder="WeatherAPI.com API key">
+      <a href="https://www.weatherapi.com/signup.aspx" target="_blank">[無料登録]</a>
+    </div>
+    <div class="s-row" style="margin-top:8px">
+      <button id="save-keys-btn" style="letter-spacing:2px;font-size:11px">SAVE &amp; RESCAN</button>
+      <span class="save-note">Keys stored in localStorage</span>
+    </div>
+  </div>
+
+  <div class="status-bar" id="status">──</div>
+
+  <div class="table-wrapper">
+    <table id="wtbl">
+      <thead id="wtbl-head"></thead>
+      <tbody id="wtbl-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="loading-ov">SCANNING...</div>
+
+<script>
+'use strict';
+
+// ── CONSTANTS ──────────────────────────────────────────────────────────
+const DOW = ['日','月','火','水','木','金','土'];
+
+const SOURCES = [
+  { id:'gfs',   name:'Open-Meteo', sub:'GFS',        key: null },
+  { id:'ecmwf', name:'Open-Meteo', sub:'ECMWF',      key: null },
+  { id:'owm',   name:'OWM',        sub:'OpenWeather', key:'owm' },
+  { id:'wapi',  name:'WeatherAPI', sub:'wapi.com',    key:'wapi' },
+  { id:'wttr',  name:'wttr.in',    sub:'3日のみ',     key: null },
+];
+
+const KEY_SIGNUP = {
+  owm:  'https://home.openweathermap.org/users/sign_up',
+  wapi: 'https://www.weatherapi.com/signup.aspx',
+};
+
+// ── STATE ──────────────────────────────────────────────────────────────
+const st = {
+  lat: 35.6895, lon: 139.6917, city: '東京',
+  days: [],       // [{date,label,isToday,isTomorrow}]
+  data: {},       // {gfs:{daily,hourly}|{error}, ...}
+  expanded: {},   // {date:bool}
+  keys: { owm:'', wapi:'' },
+};
+
+// ── HELPERS ────────────────────────────────────────────────────────────
+function rainColor(p) {
+  if (p == null) return 'var(--rain-none)';
+  if (p < 30)   return 'var(--rain-none)';
+  if (p < 60)   return 'var(--rain-low)';
+  if (p < 80)   return 'var(--rain-mid)';
+  return 'var(--rain-max)';
+}
+
+function wmoEmoji(c) {
+  c = +c;
+  if (c === 0)              return '☀️';
+  if (c <= 2)               return '🌤️';
+  if (c === 3)              return '☁️';
+  if (c===45||c===48)       return '🌫️';
+  if (c>=51&&c<=55)         return '🌦️';
+  if (c>=61&&c<=65)         return '🌧️';
+  if (c>=71&&c<=75)         return '❄️';
+  if (c>=80&&c<=82)         return '🌧️';
+  if (c===95)               return '⛈️';
+  return '🌡️';
+}
+
+function owmEmoji(icon) {
+  const i = (icon||'').slice(0,2);
+  const map = {'01':'☀️','02':'🌤️','03':'⛅','04':'☁️','09':'🌦️','10':'🌧️','11':'⛈️','13':'❄️','50':'🌫️'};
+  return map[i] || '🌡️';
+}
+
+function wapiEmoji(code) {
+  code = +code;
+  if (code===1000) return '☀️';
+  if ([1003,1006].includes(code)) return '🌤️';
+  if (code===1009) return '☁️';
+  if ([1030,1135,1147].includes(code)) return '🌫️';
+  if (code>=1063&&code<=1183) return '🌦️';
+  if (code>=1186&&code<=1246) return '🌧️';
+  if (code>=1114&&code<=1258&&[1114,1117,1210,1213,1216,1219,1222,1225,1255,1258].includes(code)) return '❄️';
+  if ([1087,1273,1276,1279,1282].includes(code)) return '⛈️';
+  return '🌡️';
+}
+
+function localDateStr(d) {
+  // YYYY-MM-DD in local time zone
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function buildDays() {
+  const days = [];
+  const now = new Date();
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() + i);
+    const date = localDateStr(d);
+    const dow = DOW[d.getDay()];
+    const label = i===0 ? `今日(${dow})` : i===1 ? `明日(${dow})` : `${d.getMonth()+1}/${d.getDate()}(${dow})`;
+    days.push({ date, label, isToday: i===0, isTomorrow: i===1 });
+  }
+  return days;
+}
+
+function saveKeys() { localStorage.setItem('nerv_weather_keys', JSON.stringify(st.keys)); }
+function loadKeys() {
+  try { const s = localStorage.getItem('nerv_weather_keys'); if (s) Object.assign(st.keys, JSON.parse(s)); } catch(_) {}
+}
+
+// ── GEOCODING ──────────────────────────────────────────────────────────
+async function geocode(city) {
+  const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=ja&format=json`);
+  const j = await r.json();
+  if (!j.results?.length) throw new Error('都市が見つかりません: ' + city);
+  const { latitude: lat, longitude: lon, name } = j.results[0];
+  return { lat, lon, name };
+}
+
+// ── FETCHERS ───────────────────────────────────────────────────────────
+async function fetchOpenMeteo(lat, lon, model) {
+  const mp = model ? `&models=${model}` : '';
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&hourly=temperature_2m,precipitation,precipitation_probability,weather_code&timezone=Asia%2FTokyo&forecast_days=7${mp}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+
+  const daily = j.daily.time.map((date, i) => ({
+    date,
+    maxTemp: Math.round(j.daily.temperature_2m_max[i] ?? 0),
+    minTemp: Math.round(j.daily.temperature_2m_min[i] ?? 0),
+    rainProb: j.daily.precipitation_probability_max[i] ?? null,
+    rainMM:   round1(j.daily.precipitation_sum[i] ?? 0),
+    emoji: wmoEmoji(j.daily.weather_code[i]),
+  }));
+
+  const hourly = {};
+  j.hourly.time.forEach((iso, i) => {
+    const date = iso.slice(0,10);
+    const hour = +iso.slice(11,13);
+    (hourly[date] = hourly[date]||[]).push({
+      hour,
+      temp:     Math.round(j.hourly.temperature_2m[i] ?? 0),
+      rainProb: j.hourly.precipitation_probability[i] ?? null,
+      rainMM:   round1(j.hourly.precipitation[i] ?? 0),
+      emoji:    wmoEmoji(j.hourly.weather_code[i]),
+    });
+  });
+
+  return { daily, hourly };
+}
+
+async function fetchOWM(lat, lon, key) {
+  const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${key}&units=metric&lang=ja&cnt=40`;
+  const r = await fetch(url);
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.message || `HTTP ${r.status}`);
+
+  const byDate = {};
+  j.list.forEach(item => {
+    const dt = new Date(item.dt * 1000);
+    const date = localDateStr(dt);
+    const hour = dt.getHours();
+    (byDate[date] = byDate[date]||[]).push({
+      hour,
+      temp:     Math.round(item.main.temp),
+      maxTemp:  Math.round(item.main.temp_max),
+      minTemp:  Math.round(item.main.temp_min),
+      rainProb: Math.round((item.pop||0)*100),
+      rainMM:   round1((item.rain&&item.rain['3h'])||0),
+      emoji:    owmEmoji(item.weather[0]?.icon||''),
+    });
+  });
+
+  const daily = Object.entries(byDate).map(([date, hrs]) => ({
+    date,
+    maxTemp:  Math.max(...hrs.map(h=>h.maxTemp)),
+    minTemp:  Math.min(...hrs.map(h=>h.minTemp)),
+    rainProb: Math.max(...hrs.map(h=>h.rainProb)),
+    rainMM:   round1(hrs.reduce((s,h)=>s+h.rainMM,0)),
+    emoji:    (hrs.find(h=>h.hour>=12)||hrs[0]).emoji,
+  }));
+
+  return { daily, hourly: byDate };
+}
+
+async function fetchWeatherAPI(lat, lon, key) {
+  const url = `https://api.weatherapi.com/v1/forecast.json?key=${key}&q=${lat},${lon}&days=7&lang=ja`;
+  const r = await fetch(url);
+  const j = await r.json();
+  if (!r.ok) throw new Error((j.error&&j.error.message)||`HTTP ${r.status}`);
+
+  const daily = j.forecast.forecastday.map(fd => ({
+    date:     fd.date,
+    maxTemp:  Math.round(fd.day.maxtemp_c),
+    minTemp:  Math.round(fd.day.mintemp_c),
+    rainProb: Math.round(fd.day.daily_chance_of_rain||0),
+    rainMM:   round1(fd.day.totalprecip_mm||0),
+    emoji:    wapiEmoji(fd.day.condition.code),
+  }));
+
+  const hourly = {};
+  j.forecast.forecastday.forEach(fd => {
+    hourly[fd.date] = fd.hour.map(h => ({
+      hour:     new Date(h.time_epoch*1000).getHours(),
+      temp:     Math.round(h.temp_c),
+      rainProb: Math.round(h.chance_of_rain||0),
+      rainMM:   round1(h.precip_mm||0),
+      emoji:    wapiEmoji(h.condition.code),
+    }));
+  });
+
+  return { daily, hourly };
+}
+
+async function fetchWttr(lat, lon) {
+  const url = `https://wttr.in/${lat},${lon}?format=j1`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+
+  const now = new Date();
+  const daily = j.weather.map((day, i) => {
+    const d = new Date(now); d.setDate(now.getDate()+i);
+    const date = localDateStr(d);
+    const hrs = day.hourly||[];
+    const rainProb = hrs.length ? Math.max(...hrs.map(h=>+h.chanceofrain||0)) : 0;
+    const rainMM   = round1(hrs.reduce((s,h)=>s+(+h.precipMM||0),0));
+    const midHour  = hrs[4]||hrs[0]||{};
+    return {
+      date,
+      maxTemp:  Math.round(+day.maxtempC),
+      minTemp:  Math.round(+day.mintempC),
+      rainProb,
+      rainMM,
+      emoji:    wmoEmoji(+( midHour.weatherCode||0 )),
+    };
+  });
+
+  const hourly = {};
+  j.weather.forEach((day, i) => {
+    const d = new Date(now); d.setDate(now.getDate()+i);
+    const date = localDateStr(d);
+    hourly[date] = (day.hourly||[]).map(h => ({
+      hour:     Math.floor((+h.time||0)/100),
+      temp:     Math.round(+h.tempC||0),
+      rainProb: +h.chanceofrain||0,
+      rainMM:   round1(+h.precipMM||0),
+      emoji:    wmoEmoji(+h.weatherCode||0),
+    }));
+  });
+
+  return { daily, hourly };
+}
+
+function round1(n) { return Math.round(+n * 10) / 10; }
+
+// ── RENDER HELPERS ─────────────────────────────────────────────────────
+function rainBadge(prob) {
+  if (prob == null) return `<span class="rain-badge" style="background:var(--rain-none)">--%</span>`;
+  return `<span class="rain-badge" style="background:${rainColor(prob)}">${prob}%</span>`;
+}
+
+function hRain(prob) {
+  if (prob == null) return `<span class="h-rain" style="background:var(--rain-none)">--</span>`;
+  return `<span class="h-rain" style="background:${rainColor(prob)}">${prob}%</span>`;
+}
+
+function renderDayCell(srcId, date) {
+  const src = SOURCES.find(s=>s.id===srcId);
+
+  // Key check
+  if (src.key) {
+    if (!st.keys[src.key]) {
+      return `<td class="day-cell"><div class="c-keyreq">KEY REQUIRED<br><a href="${KEY_SIGNUP[src.key]}" target="_blank">[取得]</a></div></td>`;
+    }
+  }
+
+  const sd = st.data[srcId];
+  if (!sd) return `<td class="day-cell"><span class="c-loading">LOADING</span></td>`;
+  if (sd.error) return `<td class="day-cell"><span class="c-error" title="${esc(sd.error)}">ERROR</span></td>`;
+
+  const day = sd.daily?.find(d=>d.date===date);
+  if (!day) return `<td class="day-cell"><span class="c-nodata">─</span></td>`;
+
+  return `<td class="day-cell"><div class="cell-inner">
+    <span class="cell-emoji">${day.emoji}</span>
+    <span class="cell-temp"><span class="hi">${day.maxTemp}°</span>/<span class="lo">${day.minTemp}°</span></span>
+    ${rainBadge(day.rainProb)}
+    <span class="rain-mm">${day.rainMM}mm</span>
+  </div></td>`;
+}
+
+function renderHourlyPanel(date) {
+  // Collect all hour values across sources
+  const hourSet = new Set();
+  SOURCES.forEach(src => {
+    const sd = st.data[src.id];
+    if (sd && !sd.error && sd.hourly?.[date]) {
+      sd.hourly[date].forEach(h => hourSet.add(h.hour));
+    }
+  });
+  if (!hourSet.size) return '<div style="padding:8px;font-size:10px;color:var(--text-faint);letter-spacing:1px">NO HOURLY DATA</div>';
+
+  const hours = [...hourSet].sort((a,b)=>a-b);
+
+  let html = `<div class="hourly-scroll"><table class="hourly-tbl"><thead><tr>
+    <th>時刻</th>
+    ${SOURCES.map(s=>`<th>${s.name}<br><span style="color:var(--text-faint);font-size:9px">${s.sub}</span></th>`).join('')}
+  </tr></thead><tbody>`;
+
+  hours.forEach(hour => {
+    html += `<tr><td class="h-time">${String(hour).padStart(2,'0')}:00</td>`;
+    SOURCES.forEach(src => {
+      const srcDef = SOURCES.find(s=>s.id===src.id);
+      if (srcDef.key && !st.keys[srcDef.key]) {
+        html += `<td><span class="h-empty">KEY</span></td>`; return;
+      }
+      const sd = st.data[src.id];
+      if (!sd)       { html += `<td><span class="h-empty">…</span></td>`; return; }
+      if (sd.error)  { html += `<td><span class="c-error" title="${esc(sd.error)}">ERR</span></td>`; return; }
+      const hd = sd.hourly?.[date]?.find(h=>h.hour===hour);
+      if (!hd)       { html += `<td><span class="h-empty">─</span></td>`; return; }
+      html += `<td>
+        ${hRain(hd.rainProb)}
+        <div class="h-temp">${hd.temp}°</div>
+        <div class="h-mm">${hd.rainMM}mm</div>
+      </td>`;
+    });
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  return html;
+}
+
+function renderTable() {
+  const days = st.days;
+
+  // HEAD
+  document.getElementById('wtbl-head').innerHTML = `<tr>
+    <th class="src-col" style="font-size:10px;color:var(--text-faint);letter-spacing:1px">SOURCE</th>
+    ${days.map(d => {
+      const cls = ['day-hdr', d.isToday?'today':'', st.expanded[d.date]?'expanded':''].filter(Boolean).join(' ');
+      const icon = st.expanded[d.date] ? '▾' : '▸';
+      return `<th class="${cls}" onclick="toggleDay('${d.date}')">
+        <span class="dlabel">${d.label}</span>
+        <span class="dtoggle">${icon} 時間別</span>
+      </th>`;
+    }).join('')}
+  </tr>`;
+
+  // BODY
+  let bodyHtml = '';
+
+  // Source rows
+  SOURCES.forEach(src => {
+    bodyHtml += `<tr>
+      <td class="src-col">
+        <span class="src-name">${src.name}</span>
+        <span class="src-sub">${src.sub}</span>
+      </td>
+      ${days.map(d => renderDayCell(src.id, d.date)).join('')}
+    </tr>`;
+  });
+
+  // Hourly panels
+  days.forEach(d => {
+    if (!st.expanded[d.date]) return;
+    bodyHtml += `<tr class="hourly-row">
+      <td class="src-col" style="font-size:10px;color:var(--text-faint);letter-spacing:1px">
+        時間別<br>${d.label}
+      </td>
+      <td class="hourly-span" colspan="${days.length}">${renderHourlyPanel(d.date)}</td>
+    </tr>`;
+  });
+
+  document.getElementById('wtbl-body').innerHTML = bodyHtml;
+}
+
+window.toggleDay = function(date) {
+  st.expanded[date] = !st.expanded[date];
+  renderTable();
+};
+
+function setStatus(msg, type) {
+  const el = document.getElementById('status');
+  const cls = type === 'active' ? 'active' : type === 'loading' ? 'loading' : '';
+  el.innerHTML = cls ? `<span class="${cls}">${esc(msg)}</span>` : esc(msg);
+}
+
+// ── FETCH ALL ──────────────────────────────────────────────────────────
+async function fetchAll() {
+  const { lat, lon } = st;
+  document.getElementById('loading-ov').classList.add('show');
+  setStatus(`${st.city} (${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E) — SCANNING...`, 'loading');
+
+  st.data = {};
+  st.expanded = {};
+  st.days.forEach(d => { if (d.isToday || d.isTomorrow) st.expanded[d.date] = true; });
+  renderTable();
+
+  const tasks = {
+    gfs:   fetchOpenMeteo(lat, lon, null),
+    ecmwf: fetchOpenMeteo(lat, lon, 'ecmwf_ifs025'),
+    owm:   st.keys.owm  ? fetchOWM(lat, lon, st.keys.owm)          : Promise.reject(Object.assign(new Error('NO_KEY'),{noKey:true})),
+    wapi:  st.keys.wapi ? fetchWeatherAPI(lat, lon, st.keys.wapi)   : Promise.reject(Object.assign(new Error('NO_KEY'),{noKey:true})),
+    wttr:  fetchWttr(lat, lon),
+  };
+
+  const results = await Promise.allSettled(Object.values(tasks));
+  Object.keys(tasks).forEach((id, i) => {
+    const res = results[i];
+    if (res.status === 'fulfilled') {
+      st.data[id] = res.value;
+    } else if (!res.reason?.noKey) {
+      st.data[id] = { error: res.reason?.message || 'Unknown error' };
+    }
+    // noKey → leave undefined so renderDayCell shows KEY REQUIRED
+  });
+
+  document.getElementById('loading-ov').classList.remove('show');
+  setStatus(`${st.city} (${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E) — INTEL ACTIVE`, 'active');
+  renderTable();
+}
+
+async function doScan() {
+  const city = document.getElementById('city-input').value.trim();
+  if (!city) return;
+  setStatus(`Geocoding: ${city}...`, 'loading');
+  document.getElementById('loading-ov').classList.add('show');
+  try {
+    const geo = await geocode(city);
+    st.lat = geo.lat; st.lon = geo.lon; st.city = geo.name || city;
+    st.days = buildDays();
+    await fetchAll();
+  } catch(e) {
+    document.getElementById('loading-ov').classList.remove('show');
+    setStatus(`ERROR: ${e.message}`);
+  }
+}
+
+async function doGeo() {
+  if (!navigator.geolocation) { setStatus('Geolocation not supported'); return; }
+  setStatus('Requesting geolocation...', 'loading');
+  navigator.geolocation.getCurrentPosition(async pos => {
+    st.lat = pos.coords.latitude;
+    st.lon = pos.coords.longitude;
+    st.city = `${st.lat.toFixed(3)}°N,${st.lon.toFixed(3)}°E`;
+    document.getElementById('city-input').value = st.city;
+    st.days = buildDays();
+    await fetchAll();
+  }, err => {
+    setStatus(`Geolocation error: ${err.message}`);
+  });
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────
+(function init() {
+  loadKeys();
+  document.getElementById('owm-key').value  = st.keys.owm  || '';
+  document.getElementById('wapi-key').value = st.keys.wapi || '';
+
+  document.getElementById('scan-btn').addEventListener('click', doScan);
+  document.getElementById('city-input').addEventListener('keydown', e => { if(e.key==='Enter') doScan(); });
+  document.getElementById('geo-btn').addEventListener('click', doGeo);
+
+  document.getElementById('settings-btn').addEventListener('click', () => {
+    document.getElementById('settings-panel').classList.toggle('open');
+  });
+
+  document.getElementById('save-keys-btn').addEventListener('click', () => {
+    st.keys.owm  = document.getElementById('owm-key').value.trim();
+    st.keys.wapi = document.getElementById('wapi-key').value.trim();
+    saveKeys();
+    document.getElementById('settings-panel').classList.remove('open');
+    doScan();
+  });
+
+  st.days = buildDays();
+  doScan();
+})();
+</script>
+</body>
+</html>
