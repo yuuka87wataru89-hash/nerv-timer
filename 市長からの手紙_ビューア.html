@@ -57,6 +57,24 @@ header span { font-size: 12px; opacity: 0.7; }
 .empty { padding: 50px 20px; text-align: center; color: #ccc; font-size: 15px; line-height:2; }
 .divider { width:1px; background:#eee; margin:0 4px; }
 mark { background: #ffe066; color: #111; border-radius: 2px; padding: 0 1px; }
+.back-btn { display: none; align-items: center; gap: 5px; margin-bottom: 14px; padding: 6px 0; color: #1a3a5c; font-size: 14px; font-weight: bold; cursor: pointer; border: none; background: none; }
+@media (max-width: 700px) {
+  html, body { height: 100%; }
+  body { display: flex; flex-direction: column; overflow: hidden; }
+  header { flex-shrink: 0; padding: 10px 16px; }
+  header span { display: none; }
+  .controls { flex-shrink: 0; }
+  .filter-row { flex-direction: column; gap: 10px; }
+  .divider { display: none; }
+  .main { flex: 1; height: 0; position: relative; overflow: hidden; }
+  .list-panel { position: absolute; inset: 0; width: 100%; min-width: unset; border-right: none; overflow-y: auto; transition: transform 0.25s ease; }
+  .detail-panel { position: absolute; inset: 0; padding: 16px 14px; overflow-y: auto; transform: translateX(100%); transition: transform 0.25s ease; }
+  .main.detail-open .list-panel { transform: translateX(-15%); pointer-events: none; }
+  .main.detail-open .detail-panel { transform: translateX(0); }
+  .back-btn { display: flex; }
+  .d-title { font-size: 18px; }
+  .d-content { font-size: 14px; line-height: 1.9; }
+}
 </style>
 </head>
 <body>
@@ -365,6 +383,7 @@ function selectMsg(vol) {
   const highlightedBody = highlight(body, q);
   const highlightedTitle = highlight(d.title, q);
   document.getElementById('detailPanel').innerHTML = `
+    <button class="back-btn" onclick="goBack()">&#8592; 一覧に戻る</button>
     <div class="d-header">
       <span class="d-vol">VOL.${d.vol}</span>&nbsp;&nbsp;<span class="d-date">${d.date}</span>
       <div class="d-title">『${highlightedTitle}』</div>
@@ -374,6 +393,7 @@ function selectMsg(vol) {
       </div>
     </div>
     <div class="d-content">${highlightedBody}</div>`;
+  document.querySelector('.main').classList.add('detail-open');
   renderList(getFiltered());
   document.getElementById('detailPanel').scrollTop = 0;
   // 最初のハイライト箇所へスクロール
@@ -392,6 +412,10 @@ function clearAll() {
   activecat = null; activeTags.clear();
   document.getElementById('searchBox').value = '';
   renderAll();
+}
+
+function goBack() {
+  document.querySelector('.main').classList.remove('detail-open');
 }
 
 document.getElementById('searchBox').addEventListener('input', renderAll);
