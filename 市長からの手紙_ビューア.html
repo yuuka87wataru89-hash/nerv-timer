@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>市長からの手紙 ── メッセージ一覧</title>
+<meta name="theme-color" content="#1a3a5c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="市長の手紙">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif; background: #f0f2f5; color: #333; }
@@ -420,6 +426,10 @@ function goBack() {
 
 document.getElementById('searchBox').addEventListener('input', renderAll);
 renderAll();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+}
 </script>
 </body>
 </html>

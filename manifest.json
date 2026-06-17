@@ -1,0 +1,19 @@
+{
+  "name": "市長からの手紙",
+  "short_name": "市長の手紙",
+  "description": "北九州市長 武内和久 メッセージアーカイブ",
+  "start_url": "./市長からの手紙_ビューア.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f0f2f5",
+  "theme_color": "#1a3a5c",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
