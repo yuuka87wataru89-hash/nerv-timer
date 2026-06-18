@@ -3,850 +3,944 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NERV :: MAGI OPERATION SYSTEM</title>
+<title>NERV :: WEATHER INTEL SYSTEM</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:          #040404;
-  --orange:      #e86400;
-  --orange-dim:  rgba(232,100,0,0.13);
-  --orange-faint:rgba(232,100,0,0.055);
-  --green:       #00bb3a;
-  --amber:       #c8a000;
-  --red:         #cc1111;
-  --text:        #e86400;
-  --text-dim:    rgba(232,100,0,0.5);
-  --text-faint:  rgba(232,100,0,0.22);
-  --border:      rgba(232,100,0,0.22);
-  --border2:     rgba(232,100,0,0.5);
+  --bg:         #f5f7fa;
+  --surface:    #ffffff;
+  --header-bg:  #1e3a5f;
+  --header-txt: #ffffff;
+  --primary:    #1e3a5f;
+  --accent:     #2563eb;
+  --text:       #1f2937;
+  --text-dim:   #6b7280;
+  --text-faint: #9ca3af;
+  --border:     #e5e7eb;
+  --border2:    #d1d5db;
+  --src-bg:     #f8fafc;
+  --today-hl:   #eff6ff;
+  --today-bdr:  #2563eb;
+  --rain-none:  #9ca3af;
+  --rain-low:   #60a5fa;
+  --rain-mid:   #2563eb;
+  --rain-high:  #1d4ed8;
+  --rain-max:   #7c3aed;
+  --hi-color:   #dc2626;
+  --lo-color:   #2563eb;
 }
 
-@keyframes flicker {
-  0%,94%,100% { opacity:1; }
-  95% { opacity:.97; }
-  97% { opacity:.98; }
-  99% { opacity:.96; }
-}
-@keyframes blink {
-  0%,49%{ opacity:1; } 50%,100%{ opacity:0; }
-}
-@keyframes scan {
-  0%   { background-position: 0 0; }
-  100% { background-position: 0 100%; }
-}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes spin  { to{transform:rotate(360deg)} }
 
 body {
-  background-color: var(--bg);
-  background-image:
-    linear-gradient(var(--orange-faint) 1px, transparent 1px),
-    linear-gradient(90deg, var(--orange-faint) 1px, transparent 1px);
-  background-size: 44px 44px;
+  background: var(--bg);
   color: var(--text);
-  font-family: 'Courier New', Consolas, 'Lucida Console', monospace;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: flicker 10s infinite;
-  position: relative;
-}
-
-/* Scanlines */
-body::before {
-  content: '';
-  position: fixed; inset: 0;
-  background: repeating-linear-gradient(
-    0deg, transparent, transparent 3px,
-    rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 4px
-  );
-  pointer-events: none;
-  z-index: 1000;
-}
-
-/* Moving scan beam */
-body::after {
-  content: '';
-  position: fixed; left:0; right:0;
-  height: 120px;
-  background: linear-gradient(transparent, rgba(232,100,0,0.018), transparent);
-  animation: scan 6s linear infinite;
-  pointer-events: none;
-  z-index: 999;
-}
-
-#app {
-  width: 100%;
-  max-width: 500px;
-  padding: 1.5rem 1.75rem;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 /* ── HEADER ── */
-#header {
+.app-header {
+  background: var(--header-bg);
+  color: var(--header-txt);
+  padding: 12px 16px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--border2);
-  margin-bottom: 1.5rem;
-  position: relative;
+  gap: 12px;
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
-#header::after {
-  content: '';
-  position: absolute;
-  bottom: -4px; left: 0; right: 0;
-  height: 1px;
-  background: var(--border);
-}
+.app-logo { font-size: 18px; font-weight: 700; letter-spacing: 2px; flex-shrink: 0; white-space: nowrap; }
+.app-logo small { display: block; font-size: 10px; font-weight: 400; opacity: 0.7; letter-spacing: 1px; }
+.location-bar { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 200px; }
 
-.nerv-cross {
-  position: relative;
-  width: 30px; height: 30px;
-  flex-shrink: 0;
-}
-.nerv-cross::before {
-  content: '';
-  position: absolute;
-  left: 50%; top: 0; transform: translateX(-50%);
-  width: 9px; height: 100%;
-  background: var(--orange);
-}
-.nerv-cross::after {
-  content: '';
-  position: absolute;
-  top: 50%; left: 0; transform: translateY(-50%);
-  height: 9px; width: 100%;
-  background: var(--orange);
-}
-
-.header-title {
-  font-size: 20px;
-  font-weight: bold;
-  letter-spacing: 0.35em;
-  line-height: 1;
-  text-shadow: 0 0 12px rgba(232,100,0,0.6);
-}
-.header-sub {
-  font-size: 9px;
-  color: var(--text-dim);
-  letter-spacing: 0.08em;
-  margin-top: 5px;
-}
-
-.header-right {
-  margin-left: auto;
-  text-align: right;
-  font-size: 10px;
-  color: var(--text-dim);
-  letter-spacing: 0.08em;
-  line-height: 1.7;
-}
-#sys-clock { color: var(--green); }
-
-/* ── RING ── */
-#ring-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-#ring-wrap {
-  position: relative;
-  width: 270px; height: 270px;
-}
-
-#ring-svg {
-  width: 100%; height: 100%;
-  transform: rotate(-90deg);
-  overflow: visible;
-}
-
-#ring-track {
-  fill: none;
-  stroke: rgba(232,100,0,0.1);
-  stroke-width: 2.5;
-  stroke-dasharray: 5 5;
-}
-
-#ring-fill {
-  fill: none;
-  stroke: var(--orange);
-  stroke-width: 3;
-  stroke-linecap: butt;
-  transition: stroke-dashoffset 0.9s linear, stroke 0.5s;
-  filter: drop-shadow(0 0 5px var(--orange));
-}
-
-#ring-center {
-  position: absolute; inset: 0;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 3px;
-}
-
-.ring-label {
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  color: var(--text-faint);
-  text-transform: uppercase;
-}
-
-#time-display {
-  font-size: 62px;
-  font-weight: bold;
-  letter-spacing: 5px;
-  color: var(--orange);
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  transition: color 0.4s;
-  text-shadow: 0 0 24px rgba(232,100,0,0.45);
-}
-
-#status-label {
-  font-size: 9px;
-  letter-spacing: 0.18em;
-  color: var(--green);
-  margin-top: 8px;
-  text-align: center;
-  min-height: 13px;
-  transition: color 0.4s;
-}
-
-/* ── ALERT BAND ── */
-#alert-band {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 14px 0 0;
-  padding: 5px 12px;
-  border: 1px solid var(--border);
-  background: rgba(0,0,0,0.5);
-  font-size: 10px;
-  letter-spacing: 0.15em;
-  color: var(--text-faint);
-}
-#alert-level { font-weight: bold; }
-
-/* Warning stripe */
-.hazard-stripe {
-  height: 7px;
-  background: repeating-linear-gradient(
-    -45deg,
-    var(--orange), var(--orange) 6px,
-    #000 6px, #000 12px
-  );
-  opacity: 0;
-  transition: opacity 0.3s;
-  margin: 4px 0;
-}
-.hazard-stripe.show { opacity: 1; }
-
-/* ── PRESETS ── */
-.preset-row {
-  display: flex; gap: 5px;
-  justify-content: center;
-  margin-top: 14px;
-}
-
-.preset-btn {
-  font-size: 11px;
-  padding: 5px 14px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-dim);
-  cursor: pointer;
-  font-family: inherit;
-  letter-spacing: 0.1em;
-  transition: all 0.12s;
-}
-.preset-btn:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-dim); }
-.preset-btn.active { border-color: var(--orange); color: var(--orange); background: var(--orange-dim); font-weight: bold; }
-
-.custom-row {
-  display: flex; align-items: center; gap: 6px;
-  justify-content: center;
-  margin-top: 8px;
-}
-
-.time-input-wrap {
-  display: flex; align-items: center; gap: 3px;
-  border: 1px solid var(--border);
-  background: rgba(0,0,0,0.6);
-  padding: 5px 12px;
-}
-.time-input-wrap input {
-  width: 42px; text-align: center; font-size: 13px;
-  border: none; background: transparent;
-  color: var(--orange); outline: none;
-  font-family: inherit; font-variant-numeric: tabular-nums;
-}
-.time-input-wrap span { font-size: 10px; color: var(--text-dim); }
-
-.step-btn {
-  width: 30px; height: 30px;
-  border: 1px solid var(--border);
-  background: transparent; color: var(--text-dim);
-  cursor: pointer; font-size: 17px;
-  display: flex; align-items: center; justify-content: center;
-  font-family: inherit; transition: all 0.12s;
-}
-.step-btn:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-dim); }
-
-/* ── CONTROLS ── */
-.ctrl-row {
-  display: flex; gap: 8px;
-  margin-top: 16px;
-  align-items: center; justify-content: center;
-}
-
-#main-btn {
-  display: flex; align-items: center; gap: 8px;
-  padding: 11px 42px;
-  font-size: 12px;
-  border: 1px solid var(--orange);
-  background: var(--orange-dim);
-  color: var(--orange);
-  cursor: pointer; font-weight: bold;
-  font-family: inherit; letter-spacing: 0.25em;
-  text-transform: uppercase; transition: all 0.12s;
-}
-#main-btn:hover { background: rgba(232,100,0,0.25); }
-#main-btn.running { border-color: var(--border); background: transparent; color: var(--text-dim); }
-
-#reset-btn {
-  width: 42px; height: 42px;
-  border: 1px solid var(--border);
-  background: transparent; color: var(--text-dim);
-  cursor: pointer; display: flex;
-  align-items: center; justify-content: center;
-  transition: all 0.12s;
-}
-#reset-btn:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-dim); }
-
-/* ── LOG ── */
-#log-section {
-  margin-top: 16px;
-  border-top: 1px solid var(--border);
-  padding-top: 10px;
-}
-.log-header {
-  font-size: 9px; letter-spacing: 0.18em;
-  color: var(--text-faint); margin-bottom: 7px;
-}
-.log-entry {
-  display: flex; align-items: baseline; gap: 6px;
-  font-size: 10px; color: var(--text-dim);
-  padding: 4px 0;
-  border-bottom: 1px solid rgba(232,100,0,0.06);
-  letter-spacing: 0.04em;
-}
-.log-pre { color: var(--green); flex-shrink: 0; }
-
-/* ── OVERLAYS ── */
-#flash-overlay {
-  position: fixed; inset: 0;
-  pointer-events: none; opacity: 0;
-  z-index: 996;
-}
-
-#at-field {
-  position: fixed; inset: 0;
-  pointer-events: none; opacity: 0;
-  display: flex; align-items: center; justify-content: center;
-  z-index: 995;
-  transition: opacity 0.08s;
-}
-#at-field svg { width: min(92vw,92vh); height: min(92vw,92vh); }
-
-/* ── ALERT CONFIG ── */
-#alert-config {
-  margin-top: 10px;
-}
-.alert-config-label {
-  font-size: 9px; letter-spacing: 0.18em;
-  color: var(--text-faint); margin-bottom: 7px;
-}
-.alert-toggle-row {
-  display: flex; gap: 5px;
-}
-.alert-toggle {
+input[type=text] {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  padding: 7px 10px;
+  outline: none;
   flex: 1;
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  padding: 7px 4px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-faint);
-  cursor: pointer; font-family: inherit;
-  letter-spacing: 0.06em;
-  transition: all 0.15s;
-  position: relative;
-  overflow: hidden;
+  min-width: 0;
 }
-.alert-toggle::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: var(--orange-dim);
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-.alert-toggle.active { border-color: var(--border2); color: var(--text-dim); }
-.alert-toggle.active::before { opacity: 1; }
-.atg-indicator {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--text-faint);
-  transition: background 0.15s, box-shadow 0.15s;
-}
-.alert-toggle.active .atg-indicator {
-  background: var(--orange);
-  box-shadow: 0 0 6px var(--orange);
-}
-.atg-time { font-size: 13px; font-weight: bold; font-variant-numeric: tabular-nums; }
-.atg-level { font-size: 8px; letter-spacing: 0.1em; }
-.alert-toggle[data-idx="0"] .atg-level { color: #c8a000; }
-.alert-toggle[data-idx="1"] .atg-level { color: #e86400; }
-.alert-toggle[data-idx="2"] .atg-level { color: #cc4400; }
-.alert-toggle[data-idx="3"] .atg-level { color: #cc1111; }
-.alert-toggle:not(.active) .atg-level { color: var(--text-faint) !important; }
+input[type=text]::placeholder { color: rgba(255,255,255,0.5); }
+input[type=text]:focus { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.6); }
 
-svg.icon {
-  width: 15px; height: 15px; stroke: currentColor;
-  fill: none; stroke-width: 2;
-  stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0;
+button {
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  font-size: 13px;
+  padding: 7px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+button:hover { background: rgba(255,255,255,0.28); }
+button.primary { background: #2563eb; border-color: #2563eb; font-weight: 600; }
+button.primary:hover { background: #1d4ed8; }
+button.icon-btn { padding: 7px 10px; font-size: 16px; }
+
+/* ── STATUS BAR ── */
+.status-bar {
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 8px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.status-bar .active { color: var(--accent); font-weight: 600; }
+.status-bar .loading { animation: pulse 1s infinite; }
+
+/* ── MAIN ── */
+#app { padding: 12px; }
+
+/* ── LEGEND ── */
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 2px; }
+
+/* ── TABLE ── */
+.table-wrapper {
+  overflow-x: auto;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  border: 1px solid var(--border);
+}
+
+table { border-collapse: collapse; width: 100%; min-width: 700px; }
+th, td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 0; vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+
+/* Source label column */
+th.src-col, td.src-col {
+  width: 110px; min-width: 95px;
+  padding: 10px 10px;
+  background: var(--src-bg);
+  position: sticky; left: 0; z-index: 2;
+  vertical-align: middle;
+  border-right: 2px solid var(--border2);
+}
+td.src-col .src-name { color: var(--primary); display: block; font-size: 13px; font-weight: 700; }
+td.src-col .src-sub  { font-size: 11px; color: var(--text-faint); }
+
+/* Day header */
+th.day-hdr {
+  text-align: center;
+  padding: 8px 6px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: var(--src-bg);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  min-width: 110px;
+  transition: background 0.12s;
+}
+th.day-hdr:hover  { background: #eff6ff; color: var(--accent); }
+th.day-hdr.today  { background: var(--today-hl); border-top: 3px solid var(--today-bdr); }
+th.day-hdr.today .dlabel { color: var(--accent); font-weight: 700; }
+th.day-hdr.expanded { background: #dbeafe; }
+th.day-hdr .dlabel  { display: block; margin-bottom: 3px; font-size: 13px; color: var(--text); }
+th.day-hdr .dtoggle { font-size: 10px; color: var(--accent); background: #eff6ff; border-radius: 4px; padding: 1px 5px; }
+th.day-hdr.expanded .dtoggle { background: #bfdbfe; }
+
+/* Data cells */
+td.day-cell {
+  text-align: center;
+  padding: 8px 6px;
+  min-width: 110px;
+  vertical-align: middle;
+  background: #fff;
+}
+tr:nth-child(even) td.day-cell { background: #fafbfc; }
+td.day-cell.today-col { background: #f0f7ff; }
+
+.cell-inner { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.cell-emoji { font-size: 30px; line-height: 1.1; }
+.cell-temp  { font-size: 12px; font-weight: 600; }
+.cell-temp .hi { color: var(--hi-color); }
+.cell-temp .lo { color: var(--lo-color); }
+.cell-desc { font-size: 10px; color: var(--text-dim); max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.rain-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  min-width: 52px;
+  text-align: center;
+}
+.rain-mm { font-size: 11px; color: var(--accent); }
+
+.c-loading { color: var(--text-faint); font-size: 11px; animation: pulse 1s infinite; }
+.c-error   { color: #dc2626; font-size: 11px; cursor: help; }
+.c-nodata  { color: var(--text-faint); font-size: 14px; }
+
+/* ── HOURLY PANEL ── */
+.hourly-section {
+  background: #f0f7ff;
+  border-top: 2px solid #bfdbfe;
+  border-bottom: 2px solid #bfdbfe;
+}
+.hourly-section td { border: none; padding: 0; }
+.hourly-label {
+  padding: 6px 10px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: #dbeafe;
+}
+.hourly-chart-wrap {
+  padding: 8px 12px 12px;
+  background: #f0f7ff;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.hourly-chart-wrap svg { min-width: 480px; }
+.h-no-data { color: var(--text-faint); font-size: 11px; font-style: italic; padding: 10px; }
+
+/* ── LOADING OVERLAY ── */
+#loading-ov {
+  display: none; position: fixed; inset: 0;
+  background: rgba(30,58,95,0.75);
+  z-index: 500; align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px;
+}
+#loading-ov.show { display: flex; }
+.spinner {
+  width: 40px; height: 40px;
+  border: 4px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.loading-text { color: #fff; font-size: 14px; font-weight: 600; letter-spacing: 2px; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+/* ── MOBILE ── */
+@media (max-width: 640px) {
+  .app-header { padding: 10px 12px; gap: 8px; }
+  .app-logo { font-size: 15px; }
+  .app-logo small { display: none; }
+  input[type=text] { font-size: 14px; padding: 8px 10px; }
+  button { padding: 8px 10px; font-size: 13px; }
+  #app { padding: 6px; }
+
+  /* Source column: very narrow, initials only */
+  th.src-col, td.src-col {
+    width: 52px; min-width: 52px; padding: 4px 4px;
+    font-size: 10px;
+  }
+  td.src-col .src-name { font-size: 10px; letter-spacing: 0; }
+  td.src-col .src-sub  { display: none; }
+
+  /* Day columns: compact */
+  th.day-hdr { min-width: 72px; padding: 5px 2px 4px; font-size: 11px; }
+  th.day-hdr .dlabel { font-size: 11px; }
+  th.day-hdr .dtoggle { font-size: 9px; }
+  td.day-cell { min-width: 72px; padding: 5px 2px; }
+  .cell-emoji { font-size: 24px; }
+  .cell-temp { font-size: 11px; }
+  .rain-badge { font-size: 12px; padding: 2px 5px; min-width: 40px; }
+  .rain-mm { display: none; }
+  .cell-desc { display: none; }
+
+  /* Hourly chart: compact */
+  .hourly-chart-wrap { padding: 6px 6px 8px; }
+
+  /* Legend: wrap */
+  .legend { font-size: 10px; gap: 6px; }
+  .legend span[style] { display: none; }
 }
 </style>
 </head>
-<body>
+<header class="app-header">
+  <div class="app-logo">
+    🌦 天気予報
+    <small>5ソース比較 · 雨の確率重視</small>
+  </div>
+  <div class="location-bar">
+    <input type="text" id="city-input" placeholder="都市名を入力" value="北九州市八幡西区">
+    <button class="icon-btn" id="geo-btn" title="現在地を取得">📍</button>
+    <button class="primary" id="scan-btn">🔍 検索</button>
+  </div>
+</header>
+
+<div class="status-bar" id="status">──</div>
+
 <div id="app">
-
-  <div id="header">
-    <div class="nerv-cross"></div>
-    <div>
-      <div class="header-title">N E R V</div>
-      <div class="header-sub">作戦行動時間管理システム&nbsp;&nbsp;//&nbsp;&nbsp;MAGI OPERATION CONTROL</div>
-    </div>
-    <div class="header-right">
-      <div id="sys-clock">--:--:--</div>
-      <div>CASPER-3 ACTIVE</div>
-    </div>
+  <div class="legend">
+    <strong>雨の確率：</strong>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--rain-none)"></span>〜29%</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--rain-low)"></span>30〜59%</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--rain-mid)"></span>60〜79%</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--rain-max)"></span>80%〜</span>
+    <span style="margin-left:8px;color:var(--text-faint)">※今日・明日は時間別自動展開。日付クリックで切替</span>
   </div>
 
-  <div id="ring-section">
-    <div id="ring-wrap">
-      <svg id="ring-svg" viewBox="0 0 270 270">
-        <circle id="ring-track" cx="135" cy="135" r="118"/>
-        <g id="ticks"></g>
-        <circle id="ring-fill"  cx="135" cy="135" r="118"/>
-        <g id="m-dots"></g>
-      </svg>
-      <div id="ring-center">
-        <div class="ring-label">REMAINING TIME // 残り時間</div>
-        <div id="time-display">20:00</div>
-        <div class="ring-label" id="elapsed-label">ELAPSED — 00:00</div>
-      </div>
-    </div>
-    <div id="status-label">[ STANDBY — 待機中 ]</div>
+  <div class="table-wrapper">
+    <table id="wtbl">
+      <thead id="wtbl-head"></thead>
+      <tbody id="wtbl-body"></tbody>
+    </table>
   </div>
-
-  <div id="alert-band">
-    <span>//</span>
-    <span id="alert-level" style="color:var(--green)">ALERT LEVEL : GREEN</span>
-    <span>//</span>
-  </div>
-  <div class="hazard-stripe" id="hazard"></div>
-
-  <div id="alert-config">
-    <div class="alert-config-label">// ALERT TRIGGER CONFIG ——————————————</div>
-    <div class="alert-toggle-row">
-      <button class="alert-toggle active" data-idx="0">
-        <span class="atg-indicator"></span>
-        <span class="atg-time">10:00</span>
-        <span class="atg-level">CAUTION</span>
-      </button>
-      <button class="alert-toggle active" data-idx="1">
-        <span class="atg-indicator"></span>
-        <span class="atg-time">05:00</span>
-        <span class="atg-level">WARNING</span>
-      </button>
-      <button class="alert-toggle active" data-idx="2">
-        <span class="atg-indicator"></span>
-        <span class="atg-time">03:00</span>
-        <span class="atg-level">DANGER</span>
-      </button>
-      <button class="alert-toggle active" data-idx="3">
-        <span class="atg-indicator"></span>
-        <span class="atg-time">01:00</span>
-        <span class="atg-level">CRITICAL</span>
-      </button>
-    </div>
-  </div>
-
-  <div class="preset-row">
-    <button class="preset-btn" data-sec="300">05:00</button>
-    <button class="preset-btn active" data-sec="1200">20:00</button>
-    <button class="preset-btn" data-sec="1800">30:00</button>
-    <button class="preset-btn" data-sec="3600">60:00</button>
-  </div>
-
-  <div class="custom-row">
-    <button class="step-btn" id="dec-10s">−</button>
-    <div class="time-input-wrap">
-      <input type="number" id="min-input" min="0" max="179" value="20"/>
-      <span>分</span>
-      <input type="number" id="sec-input" min="0" max="50" step="10" value="0"/>
-      <span>秒</span>
-    </div>
-    <button class="step-btn" id="inc-10s">＋</button>
-    <button class="preset-btn" id="apply-btn">SET</button>
-  </div>
-
-  <div class="ctrl-row">
-    <button id="reset-btn" title="RESET">
-      <svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-    </button>
-    <button id="main-btn">
-      <svg class="icon" id="btn-icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-      <span id="btn-label">START</span>
-    </button>
-  </div>
-
-  <div id="log-section">
-    <div class="log-header">// MAGI EVENT LOG ————————————————————————————</div>
-    <div id="milestone-log"></div>
-  </div>
-
 </div>
 
-<!-- AT Field -->
-<div id="at-field">
-  <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
-    <polygon id="hex1" points="200,18 362,109 362,291 200,382 38,291 38,109"
-      fill="none" stroke="#e86400" stroke-width="2.5"/>
-    <polygon points="200,50 338,125 338,275 200,350 62,275 62,125"
-      fill="none" stroke="#e86400" stroke-width="1.2" opacity="0.5"/>
-    <polygon points="200,82 314,141 314,259 200,318 86,259 86,141"
-      fill="none" stroke="#e86400" stroke-width="0.6" opacity="0.3"/>
-    <line x1="200" y1="18" x2="200" y2="382" stroke="#e86400" stroke-width="0.6" opacity="0.25"/>
-    <line x1="38"  y1="109" x2="362" y2="291" stroke="#e86400" stroke-width="0.6" opacity="0.25"/>
-    <line x1="362" y1="109" x2="38"  y2="291" stroke="#e86400" stroke-width="0.6" opacity="0.25"/>
-    <circle cx="200" cy="200" r="20" fill="none" stroke="#e86400" stroke-width="1" opacity="0.4"/>
-    <circle cx="200" cy="200" r="6"  fill="#e86400" opacity="0.6"/>
-  </svg>
+<div id="loading-ov">
+  <div class="spinner"></div>
+  <div class="loading-text">データ取得中...</div>
 </div>
-
-<div id="flash-overlay"></div>
 
 <script>
-(function () {
-  const R = 118;
-  const CX = 135, CY = 135;
-  const CIRC = 2 * Math.PI * R;
+'use strict';
 
-  const ICON_PLAY  = '<polygon points="5 3 19 12 5 21 5 3"/>';
-  const ICON_PAUSE = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+// ── CONSTANTS ──────────────────────────────────────────────────────────
+const DOW = ['日','月','火','水','木','金','土'];
 
-  const MILESTONES = [
-    { sec:600, label:'10:00', jp:'残り10分', alertLabel:'CAUTION',  alertColor:'#c8a000', ringColor:'#c8a000', atColor:'#c8a000' },
-    { sec:300, label:'05:00', jp:'残り5分',  alertLabel:'WARNING',  alertColor:'#e86400', ringColor:'#e86400', atColor:'#e86400' },
-    { sec:180, label:'03:00', jp:'残り3分',  alertLabel:'DANGER',   alertColor:'#cc4400', ringColor:'#cc4400', atColor:'#cc4400' },
-    { sec:60,  label:'01:00', jp:'残り1分',  alertLabel:'CRITICAL', alertColor:'#cc1111', ringColor:'#cc1111', atColor:'#cc1111' },
-  ];
+// SOURCES: shown in daily table (気象庁 official for daily, no MSM row)
+const SOURCES = [
+  { id:'jma',   name:'気象庁',    sub:'公式API'       },
+  { id:'ecmwf', name:'ECMWF',     sub:'Open-Meteo'    },
+  { id:'gfs',   name:'GFS (NOAA)',sub:'Open-Meteo'    },
+  { id:'wttr',  name:'wttr.in',   sub:'3日分'         },
+];
+// HOURLY_SOURCES: shown in hourly chart (MSM replaces JMA which has no hourly data)
+const HOURLY_SOURCES = [
+  { id:'msm',   name:'気象庁MSM', sub:'Open-Meteo', color:'#7c3aed' },
+  { id:'ecmwf', name:'ECMWF',     sub:'Open-Meteo', color:'#2563eb' },
+  { id:'gfs',   name:'GFS (NOAA)',sub:'Open-Meteo', color:'#16a34a' },
+  { id:'wttr',  name:'wttr.in',   sub:'3日分',      color:'#ea580c' },
+];
 
-  let totalSec=20*60, remaining=totalSec, elapsed=0;
-  let running=false, intervalId=null;
-  let passedMilestones=new Set();
-  let enabledMilestones=new Set([0,1,2,3]);
+const JMA_AREA_CODES = {
+  '北海道': '016000',
+  '青森県': '020000', '青森': '020000',
+  '岩手県': '030000', '岩手': '030000',
+  '宮城県': '040000', '宮城': '040000',
+  '秋田県': '050000', '秋田': '050000',
+  '山形県': '060000', '山形': '060000',
+  '福島県': '070000', '福島': '070000',
+  '茨城県': '080000', '茨城': '080000',
+  '栃木県': '090000', '栃木': '090000',
+  '群馬県': '100000', '群馬': '100000',
+  '埼玉県': '110000', '埼玉': '110000',
+  '千葉県': '120000', '千葉': '120000',
+  '東京都': '130000', '東京': '130000',
+  '神奈川県': '140000', '神奈川': '140000',
+  '新潟県': '150000', '新潟': '150000',
+  '富山県': '160000', '富山': '160000',
+  '石川県': '170000', '石川': '170000',
+  '福井県': '180000', '福井': '180000',
+  '山梨県': '190000', '山梨': '190000',
+  '長野県': '200000', '長野': '200000',
+  '岐阜県': '210000', '岐阜': '210000',
+  '静岡県': '220000', '静岡': '220000',
+  '愛知県': '230000', '愛知': '230000',
+  '三重県': '240000', '三重': '240000',
+  '滋賀県': '250000', '滋賀': '250000',
+  '京都府': '260000', '京都': '260000',
+  '大阪府': '270000', '大阪': '270000',
+  '兵庫県': '280000', '兵庫': '280000',
+  '奈良県': '290000', '奈良': '290000',
+  '和歌山県': '300000', '和歌山': '300000',
+  '鳥取県': '310000', '鳥取': '310000',
+  '島根県': '320000', '島根': '320000',
+  '岡山県': '330000', '岡山': '330000',
+  '広島県': '340000', '広島': '340000',
+  '山口県': '350000', '山口': '350000',
+  '徳島県': '360000', '徳島': '360000',
+  '香川県': '370000', '香川': '370000',
+  '愛媛県': '380000', '愛媛': '380000',
+  '高知県': '390000', '高知': '390000',
+  '福岡県': '400000', '福岡': '400000',
+  '佐賀県': '410000', '佐賀': '410000',
+  '長崎県': '420000', '長崎': '420000',
+  '熊本県': '430000', '熊本': '430000',
+  '大分県': '440000', '大分': '440000',
+  '宮崎県': '450000', '宮崎': '450000',
+  '鹿児島県': '460100', '鹿児島': '460100',
+  '沖縄県': '471000', '沖縄': '471000',
+};
 
-  const display      = document.getElementById('time-display');
-  const elapsedLabel = document.getElementById('elapsed-label');
-  const statusLabel  = document.getElementById('status-label');
-  const alertLevelEl = document.getElementById('alert-level');
-  const ringFill     = document.getElementById('ring-fill');
-  const mDots        = document.getElementById('m-dots');
-  const ticksG       = document.getElementById('ticks');
-  const mainBtn      = document.getElementById('main-btn');
-  const btnIcon      = document.getElementById('btn-icon');
-  const btnLabel     = document.getElementById('btn-label');
-  const resetBtn     = document.getElementById('reset-btn');
-  const milestoneLog = document.getElementById('milestone-log');
-  const flashOverlay = document.getElementById('flash-overlay');
-  const atField      = document.getElementById('at-field');
-  const hazard       = document.getElementById('hazard');
-  const minInput     = document.getElementById('min-input');
-  const secInput     = document.getElementById('sec-input');
+// ── STATE ──────────────────────────────────────────────────────────────
+const st = {
+  lat: 33.7500, lon: 130.7500, city: '北九州市八幡西区',
+  admin1: '福岡県',   // prefecture from geocoding
+  days: [],           // [{date,label,isToday,isTomorrow}]
+  data: {},           // {srcId:{daily,hourly}|{error}, ...}
+  expanded: {},       // {date:bool}
+};
 
-  ringFill.style.strokeDasharray  = CIRC;
-  ringFill.style.strokeDashoffset = 0;
+// ── HELPERS ────────────────────────────────────────────────────────────
+function rainColor(p) {
+  if (p == null) return 'var(--rain-none)';
+  if (p < 30)   return 'var(--rain-none)';
+  if (p < 60)   return 'var(--rain-low)';
+  if (p < 80)   return 'var(--rain-mid)';
+  return 'var(--rain-max)';
+}
 
-  // Build 60 tick marks
-  for (let i=0; i<60; i++) {
-    const ang = (i/60)*2*Math.PI - Math.PI/2;
-    const isMain = i%5===0;
-    const r1 = isMain ? R-9 : R-5;
-    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-    line.setAttribute('x1', (CX+r1*Math.cos(ang)).toFixed(2));
-    line.setAttribute('y1', (CY+r1*Math.sin(ang)).toFixed(2));
-    line.setAttribute('x2', (CX+R *Math.cos(ang)).toFixed(2));
-    line.setAttribute('y2', (CY+R *Math.sin(ang)).toFixed(2));
-    line.setAttribute('stroke','#e86400');
-    line.setAttribute('stroke-width', isMain?'2':'0.8');
-    line.setAttribute('opacity', isMain?'0.45':'0.18');
-    ticksG.appendChild(line);
+function wmoEmoji(c) {
+  c = +c;
+  if (c === 0)                      return '☀️';
+  if (c <= 2)                       return '🌤️';
+  if (c === 3)                      return '☁️';
+  if (c === 45 || c === 48)         return '🌫️';
+  if (c >= 51 && c <= 57)           return '🌦️';  // drizzle + freezing drizzle
+  if (c >= 61 && c <= 67)           return '🌧️';  // rain + freezing rain
+  if (c >= 71 && c <= 77)           return '❄️';
+  if (c >= 80 && c <= 82)           return '🌧️';
+  if (c === 85 || c === 86)         return '❄️';
+  if (c === 95 || c === 96 || c === 99) return '⛈️';
+  return '⛅';
+}
+
+// WWO weather codes used by wttr.in (different from WMO)
+function wttrEmoji(code) {
+  code = +code;
+  if (code === 113) return '☀️';
+  if (code === 116) return '🌤️';
+  if (code === 119 || code === 122) return '☁️';
+  if (code === 143 || code === 248 || code === 260) return '🌫️';
+  if ([200,386,389,392,395].includes(code)) return '⛈️';
+  if ([227,230,323,326,329,332,335,338,350,368,371,374,377].includes(code)) return '❄️';
+  if ([179,182,185,281,284,317,320,362,365].includes(code)) return '🌨️';
+  if ([176,263,266,293,353].includes(code)) return '🌦️';
+  if (code >= 281) return '🌧️';
+  return '⛅';
+}
+
+function jmaEmoji(code) {
+  const c = +code;
+  if (c >= 400) return '❄️';
+  if (c >= 300) return '🌧️';
+  if (c >= 200) {
+    if (c >= 260) return '🌨️';
+    if (c >= 230) return '🌦️';
+    return '⛅';
   }
-
-  // Audio
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  let audioCtx=null;
-  function getAudioCtx(){ if(!audioCtx) audioCtx=new AudioCtx(); return audioCtx; }
-
-  function playBell(t){
-    try{
-      const ctx=getAudioCtx(), now=ctx.currentTime+t;
-      [[1318,.5],[2637,.25],[3955,.12],[5274,.06]].forEach(([f,g])=>{
-        const o=ctx.createOscillator(), gn=ctx.createGain();
-        o.connect(gn); gn.connect(ctx.destination);
-        o.type='sine'; o.frequency.setValueAtTime(f,now);
-        gn.gain.setValueAtTime(0,now);
-        gn.gain.linearRampToValueAtTime(g,now+.005);
-        gn.gain.exponentialRampToValueAtTime(.0001,now+1.6);
-        o.start(now); o.stop(now+1.7);
-      });
-      const o2=ctx.createOscillator(), g2=ctx.createGain();
-      o2.connect(g2); g2.connect(ctx.destination);
-      o2.type='triangle'; o2.frequency.setValueAtTime(1864,now);
-      g2.gain.setValueAtTime(.08,now); g2.gain.exponentialRampToValueAtTime(.0001,now+.08);
-      o2.start(now); o2.stop(now+.1);
-    }catch(e){}
+  if (c >= 100) {
+    if (c >= 160) return '🌦️';
+    if (c >= 130) return '🌤️';
+    return '☀️';
   }
-  function playMilestoneSound(){ for(let i=0;i<3;i++) playBell(i*.55); }
-  function playEndSound(){
-    try{
-      const ctx=getAudioCtx(), now=ctx.currentTime;
-      [1047,1319,1568,2093].forEach((f,i)=>{
-        const t=now+i*.22, o=ctx.createOscillator(), g=ctx.createGain();
-        o.connect(g); g.connect(ctx.destination);
-        o.type='sine'; o.frequency.setValueAtTime(f,t);
-        g.gain.setValueAtTime(.4,t); g.gain.exponentialRampToValueAtTime(.0001,t+1.2);
-        o.start(t); o.stop(t+1.3);
-      });
-      for(let i=0;i<3;i++) playBell(1.1+i*.5);
-    }catch(e){}
-  }
+  return '⛅';
+}
 
-  function flashFn(color,times,interval){
-    let c=0;
-    const step=()=>{
-      if(c>=times*2){flashOverlay.style.opacity=0;return;}
-      flashOverlay.style.background=color;
-      flashOverlay.style.opacity=c%2===0?'0.13':'0';
-      c++; setTimeout(step,interval);
-    }; step();
-  }
+function localDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 
-  function showAT(color){
-    atField.querySelectorAll('polygon,line,circle').forEach(el=>{
-      if(el.tagName!=='circle'||el.getAttribute('r')>'10')
-        el.setAttribute('stroke',color||'#e86400');
-      else
-        el.setAttribute('fill',color||'#e86400');
-    });
-    atField.style.transition='opacity 0.05s';
-    atField.style.opacity='1';
-    setTimeout(()=>{ atField.style.transition='opacity 0.7s'; atField.style.opacity='0'; },350);
-  }
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
-  function flashEnd(){
-    let c=0; const cols=['#cc1111','#e86400','#cc1111','#e86400','#cc1111','#e86400','#cc1111'];
-    const step=()=>{
-      if(c>=cols.length*2){flashOverlay.style.opacity=0;return;}
-      flashOverlay.style.background=cols[Math.floor(c/2)];
-      flashOverlay.style.opacity=c%2===0?'0.2':'0';
-      c++; setTimeout(step,120);
-    }; step();
-    [0,200,400,600,800].forEach(d=>setTimeout(()=>showAT('#cc1111'),d));
-  }
+function round1(n) { return Math.round(+n * 10) / 10; }
 
-  function fmt(s){
-    return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+function buildDays() {
+  const days = [];
+  const now = new Date();
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() + i);
+    const date = localDateStr(d);
+    const dow = DOW[d.getDay()];
+    const label = i===0 ? `今日(${dow})` : i===1 ? `明日(${dow})` : `${d.getMonth()+1}/${d.getDate()}(${dow})`;
+    days.push({ date, label, isToday: i===0, isTomorrow: i===1 });
   }
-  function syncInputs(sec){ minInput.value=Math.floor(sec/60); secInput.value=sec%60; }
-  function readInputs(){
-    const m=Math.max(0,parseInt(minInput.value)||0);
-    const s=Math.round((parseInt(secInput.value)||0)/10)*10;
-    return Math.min(m*60+Math.min(s,50),179*60+50);
-  }
+  return days;
+}
 
-  function buildDots(){
-    mDots.innerHTML='';
-    MILESTONES.forEach((m,i)=>{
-      if(m.sec>totalSec) return;
-      const pct=1-m.sec/totalSec;
-      const ang=pct*2*Math.PI-Math.PI/2;
-      const x=(CX+R*Math.cos(ang)).toFixed(2);
-      const y=(CY+R*Math.sin(ang)).toFixed(2);
-      const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
-      c.setAttribute('cx',x); c.setAttribute('cy',y);
-      c.setAttribute('r','5'); c.setAttribute('fill',m.ringColor);
-      c.setAttribute('opacity','0.9'); c.id='mdot-'+i;
-      mDots.appendChild(c);
-    });
-  }
+// ── GEOCODING ──────────────────────────────────────────────────────────
+async function geocode(city) {
+  const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=ja&format=json`);
+  const j = await r.json();
+  if (!j.results?.length) throw new Error('都市が見つかりません: ' + city);
+  const { latitude: lat, longitude: lon, name, admin1 } = j.results[0];
+  return { lat, lon, name, admin1: admin1 || '' };
+}
 
-  function getRingColor(){
-    if(remaining>300) return '#e86400';
-    if(remaining>180) return '#cc4400';
-    if(remaining>60)  return '#cc2800';
-    return '#cc1111';
-  }
+// ── FETCHERS ───────────────────────────────────────────────────────────
+async function fetchJMA(admin1) {
+  const areaCode = JMA_AREA_CODES[admin1] || '130000';
+  const url = `https://www.jma.go.jp/bosai/forecast/data/forecast/${areaCode}.json`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
 
-  function setAlertLevel(label,color){
-    alertLevelEl.textContent='ALERT LEVEL : '+label;
-    alertLevelEl.style.color=color;
-  }
+  // Helper: find a timeSeries that has the given field in any area
+  const findTs = (arr, field) => arr.find(ts => ts.areas?.some(a => a[field]));
+  const findArea = (ts, field) => ts?.areas.find(a => a[field]);
 
-  function updateDisplay(){
-    display.textContent=fmt(remaining);
-    elapsedLabel.textContent='ELAPSED — '+fmt(elapsed);
-    const pct=totalSec>0?remaining/totalSec:0;
-    ringFill.style.strokeDashoffset=CIRC*(1-pct);
-    const col=getRingColor();
-    ringFill.style.stroke=col;
-    ringFill.style.filter='drop-shadow(0 0 5px '+col+')';
-    display.style.color=remaining<=300 ? col : '';
-    display.style.textShadow='0 0 24px '+col+'80';
-    hazard.classList.toggle('show', remaining<=60 && running);
-  }
-
-  function checkMilestones(){
-    MILESTONES.forEach((m,i)=>{
-      if(remaining===m.sec && !passedMilestones.has(i) && enabledMilestones.has(i)){
-        passedMilestones.add(i);
-        playMilestoneSound();
-        flashFn(m.atColor,3,220);
-        showAT(m.atColor);
-        setAlertLevel(m.alertLabel, m.alertColor);
-        statusLabel.textContent='[ '+m.alertLabel+' ] '+m.jp;
-        statusLabel.style.color=m.alertColor;
-        const entry=document.createElement('div'); entry.className='log-entry';
-        const pre=document.createElement('span'); pre.className='log-pre'; pre.textContent='> ';
-        entry.appendChild(pre);
-        entry.appendChild(document.createTextNode('['+fmt(remaining)+'] '+m.alertLabel+' — '+m.jp));
-        milestoneLog.prepend(entry);
-        const dn=document.getElementById('mdot-'+i);
-        if(dn){ dn.setAttribute('fill','rgba(232,100,0,0.18)'); dn.setAttribute('opacity','0.5'); }
+  // Build popByDate: prefer j[0] short-term (6-hourly, reliable) → take max per day
+  const popByDate = {};
+  const addPops = (ts, takeMax) => {
+    if (!ts) return;
+    const area = findArea(ts, 'pops');
+    if (!area) return;
+    ts.timeDefines.forEach((iso, i) => {
+      const raw = area.pops[i];
+      if (raw == null || raw === '' || raw === '--') return;
+      const date = iso.slice(0, 10);
+      const val = +raw;
+      if (takeMax) {
+        if (popByDate[date] == null || val > popByDate[date]) popByDate[date] = val;
+      } else if (popByDate[date] == null) {
+        popByDate[date] = val;
       }
     });
+  };
+  // j[0] = short-term (3 days, 6-hourly pops) — highest priority
+  const shortTs = findTs(j[0]?.timeSeries || [], 'pops');
+  addPops(shortTs, true);
+  // j[1] = weekly pops — fill in remaining days
+  const weekly = j[1];
+  const weeklyPopTs = findTs(weekly.timeSeries, 'pops');
+  addPops(weeklyPopTs, false);
+
+  // Weather codes from weekly
+  const ts0 = findTs(weekly.timeSeries, 'weatherCodes') || weekly.timeSeries[0];
+  const area0 = findArea(ts0, 'weatherCodes') || ts0?.areas[0];
+
+  // Temps from weekly
+  const ts2 = findTs(weekly.timeSeries, 'tempsMin') || findTs(weekly.timeSeries, 'tempsMax');
+  const area2 = findArea(ts2, 'tempsMin') || findArea(ts2, 'tempsMax');
+  const tempByDate = {};
+  if (ts2 && area2) {
+    ts2.timeDefines.forEach((iso, i) => {
+      const min = area2.tempsMin?.[i];
+      const max = area2.tempsMax?.[i];
+      tempByDate[iso.slice(0, 10)] = {
+        min: (min != null && min !== '') ? +min : null,
+        max: (max != null && max !== '') ? +max : null,
+      };
+    });
   }
 
-  function tick(){
-    if(remaining<=0){
-      clearInterval(intervalId); running=false; remaining=0;
-      display.textContent='00:00';
-      display.style.color='#cc1111';
-      display.style.textShadow='0 0 30px #cc111180';
-      statusLabel.textContent='[ OPERATION COMPLETE — 作戦終了 ]';
-      statusLabel.style.color='#cc1111';
-      ringFill.style.strokeDashoffset=CIRC;
-      ringFill.style.stroke='#cc1111';
-      hazard.classList.remove('show');
-      setAlertLevel('TERMINATED','#cc1111');
-      btnIcon.innerHTML=ICON_PLAY; btnLabel.textContent='START';
-      mainBtn.classList.remove('running');
-      playEndSound(); flashEnd(); return;
+  const daily = (ts0?.timeDefines || []).map((iso, i) => {
+    const date = iso.slice(0, 10);
+    const weatherCode = area0.weatherCodes?.[i] || '0';
+    const weather     = area0.weathers?.[i] || '';
+    const temps = tempByDate[date] || {};
+    return {
+      date,
+      maxTemp:  temps.max != null ? Math.round(temps.max) : null,
+      minTemp:  temps.min != null ? Math.round(temps.min) : null,
+      rainProb: popByDate[date] ?? null,
+      rainMM:   null,
+      emoji:    jmaEmoji(weatherCode),
+      desc:     weather.replace(/\s+/g, ' ').trim(),
+    };
+  });
+
+  return { daily, hourly: {} };
+}
+
+async function fetchOpenMeteo(lat, lon, model) {
+  const mp = model ? `&models=${model}` : '';
+  const base = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&timezone=Asia%2FTokyo&forecast_days=7${mp}`;
+  const withProb    = `${base}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&hourly=temperature_2m,precipitation,precipitation_probability,weather_code`;
+  const withoutProb = `${base}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&hourly=temperature_2m,precipitation,weather_code`;
+
+  // Estimate rain probability from precipitation mm for models without the field
+  const estimateProb = mm => mm == null ? null : mm <= 0 ? 0 : mm < 0.5 ? 15 : mm < 1 ? 35 : mm < 3 ? 60 : mm < 5 ? 80 : 95;
+
+  // Try fetching with precipitation_probability; fall back if the model doesn't support it
+  async function tryFetch(url) {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (j.error || !j.hourly || !j.daily) return null;
+    return j;
+  }
+
+  let j = await tryFetch(withProb);
+  let hasProb = j != null && Array.isArray(j.hourly.precipitation_probability) &&
+                j.hourly.precipitation_probability.some(v => v != null);
+
+  if (!j) {
+    j = await tryFetch(withoutProb);
+    if (!j) throw new Error('Open-Meteo fetch failed');
+  }
+
+  const daily = j.daily.time.map((date, i) => {
+    const mm = j.daily.precipitation_sum?.[i];
+    return {
+      date,
+      maxTemp:  Math.round(j.daily.temperature_2m_max?.[i] ?? 0),
+      minTemp:  Math.round(j.daily.temperature_2m_min?.[i] ?? 0),
+      rainProb: hasProb
+        ? (j.daily.precipitation_probability_max?.[i] ?? null)
+        : estimateProb(mm),
+      rainMM:   round1(mm ?? 0),
+      emoji:    wmoEmoji(j.daily.weather_code?.[i]),
+      desc:     '',
+    };
+  });
+
+  const hourly = {};
+  (j.hourly.time || []).forEach((iso, i) => {
+    const date = iso.slice(0,10);
+    const hour = +iso.slice(11,13);
+    const mm = j.hourly.precipitation?.[i] ?? 0;
+    const prob = hasProb
+      ? (j.hourly.precipitation_probability?.[i] ?? estimateProb(mm))
+      : estimateProb(mm);
+    (hourly[date] = hourly[date]||[]).push({
+      hour,
+      temp:     Math.round(j.hourly.temperature_2m?.[i] ?? 0),
+      rainProb: prob,
+      rainMM:   round1(mm),
+      emoji:    wmoEmoji(j.hourly.weather_code?.[i]),
+    });
+  });
+
+  return { daily, hourly };
+}
+
+async function fetchWttr(lat, lon) {
+  const url = `https://wttr.in/${lat},${lon}?format=j1`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+
+  const now = new Date();
+  // wttr.in only returns 3 days
+  const daily = j.weather.map((day, i) => {
+    const d = new Date(now); d.setDate(now.getDate()+i);
+    const date = localDateStr(d);
+    const hrs = day.hourly||[];
+    const rainProb = hrs.length ? Math.max(...hrs.map(h=>+h.chanceofrain||0)) : 0;
+    const rainMM   = round1(hrs.reduce((s,h)=>s+(+h.precipMM||0),0));
+    const midHour  = hrs[4]||hrs[0]||{};
+    return {
+      date,
+      maxTemp:  Math.round(+day.maxtempC),
+      minTemp:  Math.round(+day.mintempC),
+      rainProb,
+      rainMM,
+      emoji:    wttrEmoji(+(midHour.weatherCode||0)),
+      desc:     '',
+    };
+  });
+
+  const hourly = {};
+  j.weather.forEach((day, i) => {
+    const d = new Date(now); d.setDate(now.getDate()+i);
+    const date = localDateStr(d);
+    hourly[date] = (day.hourly||[]).map(h => ({
+      hour:     Math.floor((+h.time||0)/100),
+      temp:     Math.round(+h.tempC||0),
+      rainProb: +h.chanceofrain||0,
+      rainMM:   round1(+h.precipMM||0),
+      emoji:    wttrEmoji(+h.weatherCode||0),
+    }));
+  });
+
+  return { daily, hourly };
+}
+
+// ── RENDER HELPERS ─────────────────────────────────────────────────────
+function rainBadge(prob) {
+  if (prob == null) return `<span class="rain-badge" style="background:var(--rain-none)">--%</span>`;
+  return `<span class="rain-badge" style="background:${rainColor(prob)}">${prob}%</span>`;
+}
+
+function hRain(prob) {
+  if (prob == null) return `<span class="h-rain" style="background:var(--rain-none)">--</span>`;
+  return `<span class="h-rain" style="background:${rainColor(prob)}">${prob}%</span>`;
+}
+
+function renderDayCell(srcId, date, isToday) {
+  const cls = `day-cell${isToday ? ' today-col' : ''}`;
+  const sd = st.data[srcId];
+  if (!sd) return `<td class="${cls}"><span class="c-loading">読込中...</span></td>`;
+  if (sd.error) return `<td class="${cls}"><span class="c-error" title="${esc(sd.error)}">取得失敗</span></td>`;
+
+  const day = sd.daily?.find(d => d.date === date);
+  if (!day) return `<td class="day-cell"><span class="c-nodata">─</span></td>`;
+
+  const tempStr = (day.maxTemp != null && day.minTemp != null)
+    ? `<span class="hi">${day.maxTemp}°</span>/<span class="lo">${day.minTemp}°</span>`
+    : (day.maxTemp != null ? `<span class="hi">${day.maxTemp}°</span>` : '<span style="color:var(--text-faint)">─</span>');
+
+  const mmStr = srcId === 'jma' ? '' : `<span class="rain-mm">${day.rainMM}mm</span>`;
+  const descStr = (srcId === 'jma' && day.desc)
+    ? `<span class="cell-desc" title="${esc(day.desc)}">${esc(day.desc)}</span>`
+    : '';
+
+  return `<td class="${cls}"><div class="cell-inner">
+    <span class="cell-emoji">${day.emoji}</span>
+    <span class="cell-temp">${tempStr}</span>
+    ${rainBadge(day.rainProb)}
+    ${mmStr}
+    ${descStr}
+  </div></td>`;
+}
+
+function renderHourlyPanel(date, label) {
+  const hourSources = HOURLY_SOURCES;
+
+  // Collect data per source per hour
+  const srcData = {};
+  hourSources.forEach(src => {
+    const sd = st.data[src.id];
+    if (sd && !sd.error && sd.hourly?.[date]) {
+      srcData[src.id] = {};
+      sd.hourly[date].forEach(h => { srcData[src.id][h.hour] = h; });
     }
-    remaining--; elapsed++;
-    updateDisplay(); checkMilestones();
-    if(remaining>0 && remaining<=10){
-      statusLabel.textContent='[ CRITICAL ] 残り '+remaining+' 秒';
-      statusLabel.style.color='#cc1111';
+  });
+
+  const hours = [...new Set(
+    Object.values(srcData).flatMap(d => Object.keys(d).map(Number))
+  )].sort((a,b) => a-b);
+
+  const anyLoading = hourSources.some(s => !st.data[s.id]);
+  const header = `<div class="hourly-label">⏱ 時間別・降水確率グラフ — ${esc(label)}</div>`;
+  if (!hours.length) {
+    return header + (anyLoading
+      ? '<div class="h-no-data">⏳ データ取得中...</div>'
+      : '<div class="h-no-data">時間別データなし</div>');
+  }
+
+  // SVG dimensions
+  const W = 760, H = 200;
+  const ml = 40, mr = 12, mt = 44, mb = 28;
+  const CW = W - ml - mr, CH = H - mt - mb;
+
+  const hMin = hours[0], hMax = hours[hours.length - 1];
+  const xOf = h => ml + (hMax === hMin ? CW / 2 : (h - hMin) / (hMax - hMin) * CW);
+  const yOfR = p => mt + CH - (p / 100) * CH;
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">`;
+
+  // Chart background
+  svg += `<rect x="${ml}" y="${mt}" width="${CW}" height="${CH}" fill="#f8fbff" rx="3"/>`;
+
+  // Horizontal grid lines — rain %
+  [0, 20, 40, 60, 80, 100].forEach(p => {
+    const y = yOfR(p);
+    svg += `<line x1="${ml}" y1="${y}" x2="${ml+CW}" y2="${y}" stroke="${p===0||p===100 ? '#94a3b8' : '#e2e8f0'}" stroke-width="${p===0||p===100 ? 1 : 0.7}" stroke-dasharray="${p===0||p===100 ? '' : '4,3'}"/>`;
+    svg += `<text x="${ml-5}" y="${y+4}" text-anchor="end" font-size="10" fill="#64748b">${p}%</text>`;
+  });
+
+  // Vertical grid lines + time labels
+  hours.forEach(h => {
+    const x = xOf(h);
+    svg += `<line x1="${x}" y1="${mt}" x2="${x}" y2="${mt+CH}" stroke="#dbeafe" stroke-width="0.8"/>`;
+    svg += `<text x="${x}" y="${mt+CH+14}" text-anchor="middle" font-size="10" fill="#475569">${String(h).padStart(2,'0')}:00</text>`;
+  });
+
+  // Axis border
+  svg += `<rect x="${ml}" y="${mt}" width="${CW}" height="${CH}" fill="none" stroke="#bfdbfe" stroke-width="1.2" rx="3"/>`;
+
+  // Rain probability — filled area + line + dots per source
+  hourSources.forEach(src => {
+    const d = srcData[src.id];
+    if (!d) return;
+    const pts = hours.filter(h => d[h]?.rainProb != null);
+    if (pts.length < 1) return;
+    const color = src.color || '#888';
+
+    if (pts.length >= 2) {
+      const linePoints = pts.map(h => `${xOf(h)},${yOfR(d[h].rainProb)}`).join(' ');
+      const areaPoints = `${xOf(pts[0])},${mt+CH} ${linePoints} ${xOf(pts[pts.length-1])},${mt+CH}`;
+      svg += `<polygon points="${areaPoints}" fill="${color}" fill-opacity="0.08"/>`;
+      svg += `<polyline points="${linePoints}" fill="none" stroke="${color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;
     }
-  }
+    pts.forEach(h => {
+      const y = yOfR(d[h].rainProb);
+      svg += `<circle cx="${xOf(h)}" cy="${y}" r="3.5" fill="${color}" stroke="#fff" stroke-width="1"/>`;
+      // Value label above dot
+      svg += `<text x="${xOf(h)}" y="${y-7}" text-anchor="middle" font-size="9" fill="${color}" font-weight="700">${d[h].rainProb}%</text>`;
+    });
+  });
 
-  function setTotal(sec){
-    clearInterval(intervalId); running=false;
-    totalSec=sec; remaining=sec; elapsed=0;
-    passedMilestones.clear(); milestoneLog.innerHTML='';
-    btnIcon.innerHTML=ICON_PLAY; btnLabel.textContent='START';
-    mainBtn.classList.remove('running');
-    statusLabel.textContent='[ STANDBY — 待機中 ]';
-    statusLabel.style.color='var(--green)';
-    display.style.color=''; display.style.textShadow='0 0 24px rgba(232,100,0,0.45)';
-    ringFill.style.stroke='#e86400'; ringFill.style.filter='drop-shadow(0 0 5px #e86400)';
-    hazard.classList.remove('show');
-    setAlertLevel('GREEN','var(--green)');
-    syncInputs(sec); buildDots(); updateDisplay();
-  }
+  // Weather emoji row above chart (from first available source)
+  hours.forEach(h => {
+    const src = hourSources.find(s => srcData[s.id]?.[h]?.emoji);
+    if (!src) return;
+    svg += `<text x="${xOf(h)}" y="${mt-12}" text-anchor="middle" font-size="18">${srcData[src.id][h].emoji}</text>`;
+  });
 
-  mainBtn.addEventListener('click',()=>{
-    if(remaining<=0){ setTotal(totalSec); return; }
-    if(running){
-      clearInterval(intervalId); running=false;
-      btnIcon.innerHTML=ICON_PLAY; btnLabel.textContent='START';
-      mainBtn.classList.remove('running');
-      statusLabel.textContent='[ SUSPENDED — 一時停止 ]';
+  // Legend (top-left)
+  let lx = ml;
+  const legendY = 11;
+  hourSources.forEach(src => {
+    if (!srcData[src.id]) return;
+    const color = src.color || '#888';
+    svg += `<line x1="${lx}" y1="${legendY}" x2="${lx+20}" y2="${legendY}" stroke="${color}" stroke-width="2.2"/>`;
+    svg += `<circle cx="${lx+10}" cy="${legendY}" r="3.5" fill="${color}" stroke="#fff" stroke-width="1"/>`;
+    svg += `<text x="${lx+25}" y="${legendY+4}" font-size="10" fill="#374151">${esc(src.name)}</text>`;
+    lx += (src.name.length * 7) + 40;
+  });
+
+  svg += `</svg>`;
+
+  return header + `<div class="hourly-chart-wrap">${svg}</div>`;
+}
+
+function renderTable() {
+  const days = st.days;
+
+  // HEAD
+  document.getElementById('wtbl-head').innerHTML = `<tr>
+    <th class="src-col" style="font-size:11px;color:var(--text-dim);font-weight:600">情報源</th>
+    ${days.map(d => {
+      const cls = ['day-hdr', d.isToday?'today':'', st.expanded[d.date]?'expanded':''].filter(Boolean).join(' ');
+      const icon = st.expanded[d.date] ? '▾' : '▸';
+      return `<th class="${cls}" onclick="toggleDay('${d.date}')">
+        <span class="dlabel">${d.label}</span>
+        <span class="dtoggle">${icon} 時間別</span>
+      </th>`;
+    }).join('')}
+  </tr>`;
+
+  // BODY
+  let bodyHtml = '';
+
+  SOURCES.forEach(src => {
+    bodyHtml += `<tr>
+      <td class="src-col">
+        <span class="src-name">${src.name}</span>
+        <span class="src-sub">${src.sub}</span>
+      </td>
+      ${days.map(d => renderDayCell(src.id, d.date, d.isToday)).join('')}
+    </tr>`;
+  });
+
+  // Hourly panels
+  days.forEach(d => {
+    if (!st.expanded[d.date]) return;
+    bodyHtml += `<tr class="hourly-section">
+      <td colspan="${days.length + 1}">${renderHourlyPanel(d.date, d.label)}</td>
+    </tr>`;
+  });
+
+  document.getElementById('wtbl-body').innerHTML = bodyHtml;
+}
+
+window.toggleDay = function(date) {
+  st.expanded[date] = !st.expanded[date];
+  renderTable();
+};
+
+function setStatus(msg, type) {
+  const el = document.getElementById('status');
+  const cls = type === 'active' ? 'active' : type === 'loading' ? 'loading' : '';
+  el.innerHTML = cls ? `<span class="${cls}">${esc(msg)}</span>` : esc(msg);
+}
+
+// ── FETCH ALL ──────────────────────────────────────────────────────────
+async function fetchAll() {
+  const { lat, lon, admin1 } = st;
+  document.getElementById('loading-ov').classList.add('show');
+  setStatus(`${st.city} (${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E) — SCANNING...`, 'loading');
+
+  st.data = {};
+  st.expanded = {};
+  st.days.forEach(d => { if (d.isToday || d.isTomorrow) st.expanded[d.date] = true; });
+  renderTable();
+
+  const tasks = {
+    jma:   fetchJMA(admin1),
+    msm:   fetchOpenMeteo(lat, lon, 'jma_seamless'),
+    ecmwf: fetchOpenMeteo(lat, lon, 'ecmwf_ifs025'),
+    gfs:   fetchOpenMeteo(lat, lon, null),
+    wttr:  fetchWttr(lat, lon),
+  };
+
+  const results = await Promise.allSettled(Object.values(tasks));
+  Object.keys(tasks).forEach((id, i) => {
+    const res = results[i];
+    if (res.status === 'fulfilled') {
+      st.data[id] = res.value;
     } else {
-      getAudioCtx(); running=true;
-      btnIcon.innerHTML=ICON_PAUSE; btnLabel.textContent='PAUSE';
-      mainBtn.classList.add('running');
-      statusLabel.textContent='[ OPERATION ACTIVE — 作戦継続中 ]';
-      statusLabel.style.color='var(--green)';
-      intervalId=setInterval(tick,1000);
+      st.data[id] = { error: res.reason?.message || 'Unknown error' };
     }
   });
 
-  resetBtn.addEventListener('click',()=>setTotal(totalSec));
+  document.getElementById('loading-ov').classList.remove('show');
+  setStatus(`${st.city} (${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E) — INTEL ACTIVE`, 'active');
+  renderTable();
+}
 
-  document.querySelectorAll('.preset-btn[data-sec]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      document.querySelectorAll('.preset-btn[data-sec]').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      setTotal(parseInt(btn.dataset.sec));
-    });
-  });
-
-  document.getElementById('apply-btn').addEventListener('click',()=>{
-    document.querySelectorAll('.preset-btn[data-sec]').forEach(b=>b.classList.remove('active'));
-    setTotal(readInputs());
-  });
-
-  document.getElementById('dec-10s').addEventListener('click',()=>{
-    document.querySelectorAll('.preset-btn[data-sec]').forEach(b=>b.classList.remove('active'));
-    setTotal(Math.max(10,readInputs()-10));
-  });
-
-  document.getElementById('inc-10s').addEventListener('click',()=>{
-    document.querySelectorAll('.preset-btn[data-sec]').forEach(b=>b.classList.remove('active'));
-    setTotal(Math.min(179*60+50,readInputs()+10));
-  });
-
-  secInput.addEventListener('change',()=>{
-    let v=Math.round((parseInt(secInput.value)||0)/10)*10;
-    if(v>=60){ minInput.value=(parseInt(minInput.value)||0)+1; v=0; }
-    if(v<0) v=0; secInput.value=v;
-  });
-
-  function updateClock(){
-    const n=new Date();
-    const h=String(n.getHours()).padStart(2,'0');
-    const m=String(n.getMinutes()).padStart(2,'0');
-    const s=String(n.getSeconds()).padStart(2,'0');
-    document.getElementById('sys-clock').textContent=h+':'+m+':'+s;
+async function doScan() {
+  const city = document.getElementById('city-input').value.trim();
+  if (!city) return;
+  setStatus(`Geocoding: ${city}...`, 'loading');
+  document.getElementById('loading-ov').classList.add('show');
+  try {
+    const geo = await geocode(city);
+    st.lat    = geo.lat;
+    st.lon    = geo.lon;
+    st.city   = geo.name || city;
+    st.admin1 = geo.admin1 || '';
+    st.days = buildDays();
+    await fetchAll();
+  } catch(e) {
+    setStatus(`ジオコーディング失敗 (${e.message})。デフォルト座標(東京)で試みます...`, 'loading');
+    st.city   = city;
+    st.admin1 = '';
+    st.days = buildDays();
+    await fetchAll();
   }
-  updateClock(); setInterval(updateClock,1000);
+}
 
-  document.querySelectorAll('.alert-toggle').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      const i=parseInt(btn.dataset.idx);
-      if(enabledMilestones.has(i)){
-        enabledMilestones.delete(i);
-        btn.classList.remove('active');
-      } else {
-        enabledMilestones.add(i);
-        btn.classList.add('active');
-      }
-    });
+async function doGeo() {
+  if (!navigator.geolocation) { setStatus('Geolocation not supported'); return; }
+  setStatus('Requesting geolocation...', 'loading');
+  navigator.geolocation.getCurrentPosition(async pos => {
+    st.lat    = pos.coords.latitude;
+    st.lon    = pos.coords.longitude;
+    st.city   = `${st.lat.toFixed(3)}°N,${st.lon.toFixed(3)}°E`;
+    st.admin1 = '';
+    document.getElementById('city-input').value = st.city;
+    st.days = buildDays();
+    await fetchAll();
+  }, err => {
+    setStatus(`Geolocation error: ${err.message}`);
   });
+}
 
-  setTotal(totalSec);
+// ── INIT ───────────────────────────────────────────────────────────────
+(function init() {
+  document.getElementById('scan-btn').addEventListener('click', doScan);
+  document.getElementById('city-input').addEventListener('keydown', e => { if(e.key==='Enter') doScan(); });
+  document.getElementById('geo-btn').addEventListener('click', doGeo);
+
+  st.days = buildDays();
+  doScan();
 })();
 </script>
 </body>
